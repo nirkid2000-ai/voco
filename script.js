@@ -10,48 +10,48 @@ const data = {
     "חלון",
     "ביצה",
     "תיק",
-    "אדום",
-    "בשר",
-    "לחם",
-    "חלב",
-    "בית",
-    "דלת",
-    "כיסא",
-    "ספר",
-    "עט",
-    "מחברת",
-    "עיר",
-    "רחוב",
-    "עץ",
-    "פרח",
-    "שמש",
-    "ירח",
-    "כוכב",
-    "הר",
-    "נהר",
-    "ים",
-    "חול",
-    "רוח",
-    "אש",
-    "אדמה",
-    "זהב",
-    "כסף",
-    "זמן",
-    "יום",
-    "לילה",
-    "שנה",
-    "חבר",
-    "משפחה",
-    "ילד",
-    "ילדה",
-    "אוכל",
-    "שתייה",
-    "שוק",
-    "חנות",
-    "מפתח",
-    "טלפון",
-    "מחשב",
-    "עבודה",
+    // "אדום",
+    // "בשר",
+    // "לחם",
+    // "חלב",
+    // "בית",
+    // "דלת",
+    // "כיסא",
+    // "ספר",
+    // "עט",
+    // "מחברת",
+    // "עיר",
+    // "רחוב",
+    // "עץ",
+    // "פרח",
+    // "שמש",
+    // "ירח",
+    // "כוכב",
+    // "הר",
+    // "נהר",
+    // "ים",
+    // "חול",
+    // "רוח",
+    // "אש",
+    // "אדמה",
+    // "זהב",
+    // "כסף",
+    // "זמן",
+    // "יום",
+    // "לילה",
+    // "שנה",
+    // "חבר",
+    // "משפחה",
+    // "ילד",
+    // "ילדה",
+    // "אוכל",
+    // "שתייה",
+    // "שוק",
+    // "חנות",
+    // "מפתח",
+    // "טלפון",
+    // "מחשב",
+    // "עבודה",
   ],
 
   qs: [
@@ -63,48 +63,48 @@ const data = {
     "Window",
     "Egg",
     "Bag",
-    "Red",
-    "Meat",
-    "Bread",
-    "Milk",
-    "House",
-    "Door",
-    "Chair",
-    "Book",
-    "Pen",
-    "Notebook",
-    "City",
-    "Street",
-    "Tree",
-    "Flower",
-    "Sun",
-    "Moon",
-    "Star",
-    "Mountain",
-    "River",
-    "Sea",
-    "Sand",
-    "Wind",
-    "Fire",
-    "Earth",
-    "Gold",
-    "Silver",
-    "Time",
-    "Day",
-    "Night",
-    "Year",
-    "Friend",
-    "Family",
-    "Boy",
-    "Girl",
-    "Food",
-    "Drink",
-    "Market",
-    "Shop",
-    "Key",
-    "Phone",
-    "Computer",
-    "Work",
+    // "Red",
+    // "Meat",
+    // "Bread",
+    // "Milk",
+    // "House",
+    // "Door",
+    // "Chair",
+    // "Book",
+    // "Pen",
+    // "Notebook",
+    // "City",
+    // "Street",
+    // "Tree",
+    // "Flower",
+    // "Sun",
+    // "Moon",
+    // "Star",
+    // "Mountain",
+    // "River",
+    // "Sea",
+    // "Sand",
+    // "Wind",
+    // "Fire",
+    // "Earth",
+    // "Gold",
+    // "Silver",
+    // "Time",
+    // "Day",
+    // "Night",
+    // "Year",
+    // "Friend",
+    // "Family",
+    // "Boy",
+    // "Girl",
+    // "Food",
+    // "Drink",
+    // "Market",
+    // "Shop",
+    // "Key",
+    // "Phone",
+    // "Computer",
+    // "Work",
   ],
 };
 
@@ -135,21 +135,46 @@ const cards = data.qs.map((word, i) => ({
   question: word,
   answer: data.ans[i],
   appeared: 0,
+  skipped: 0,
   rightAnswers: 0,
   wrongAnswers: 0,
 }));
 
-console.log(cards);
-
 const qLentgh = cards.length;
-let randomQ;
+let randomIndex;
 
-// choose a random number between 1 - qLength
-randomQ = Math.trunc(Math.random() * qLentgh) + 1;
+// choose a random number between 0 - qLength
 // show the quesion text by index qLength -1 becuase indexes start from 0.
-qText.textContent = cards[randomQ - 1].question;
+
+function chooseQuestion() {
+  // make sure questions cycle without repetition before full cycle
+  // check the highest appeared value and only allow questions with lower appered value show
+  //if all appered values are equal then choose random from all cards.
+  const maxAppeared = cards
+    .slice()
+    .sort((a, b) => b.appeared - a.appeared)[0].appeared;
+  console.log(maxAppeared);
+
+  const sortedQuestions = cards.filter((card) => card.appeared < maxAppeared);
+  console.log(sortedQuestions);
+  if (sortedQuestions.length > 0) {
+    randomIndex = Math.trunc(Math.random() * sortedQuestions.length);
+    console.log(randomIndex);
+    const card = sortedQuestions[randomIndex];
+    qText.textContent = card.question;
+    card.appeared += 1;
+    console.log("sorted", card);
+  } else {
+    randomIndex = Math.trunc(Math.random() * qLentgh);
+    const card = cards[randomIndex];
+    qText.textContent = card.question;
+    card.appeared += 1;
+    console.log("not sorted", card);
+  }
+}
 
 function pickQuestionAndAnswers() {
+  chooseQuestion();
   // uppdate 4 snaswers in a a list with radio buttons.
   function showAnswers() {
     list.textContent = "";
@@ -165,18 +190,54 @@ function pickQuestionAndAnswers() {
     });
   }
 
-  const answers = chooseAnswers(4, randomQ);
+  const answers = chooseAnswers(4, cards[randomIndex]);
+
+  //   function chooseAnswers(num, correct) {
+  //     console.log(correct);
+  //     const appearedMost = cards
+  //       .slice()
+  //       .sort((a, b) => b.appeared - a.appeared)[0].appeared;
+  //     console.log(appearedMost);
+
+  //     const arr = [];
+  //     const filtered = cards
+  //       .slice()
+  //       .filter((card) => card.appeared < appearedMost);
+  //     console.log(filtered);
+  //     const filteredLength = filtered.length;
+  //     while (arr.length < num) {
+  //       const randomaAns = Math.trunc(Math.random() * filteredLength);
+  //       if (cards[randomaAns] !== correct && !arr.includes(randomaAns))
+  //         arr.push(randomaAns);
+  //     }
+  //     console.log(arr);
+  //     const allAnswers = arr.map((num) => filtered[num].answer);
+  //     const randomPlace = Math.trunc(Math.random() * num);
+  //     arr[randomPlace] = randomIndex;
+  //     console.log(arr);
+  //     allAnswers[randomPlace] = correct.answer;
+  //     return allAnswers;
+  //   }
+  //   showAnswers();
+  // }
+
   function chooseAnswers(num, correct) {
-    const arr = [];
-    while (arr.length < num) {
-      const randomaAns = Math.trunc(Math.random() * qLentgh);
-      if (randomaAns !== correct - 1 && !arr.includes(randomaAns))
-        arr.push(randomaAns);
+    const cardsWithoutCorrect = cards.filter((x) => x !== correct);
+    const wrongAnsIndexes = [];
+    const wrongLength = cardsWithoutCorrect.length;
+    while (num > wrongAnsIndexes.length) {
+      const randomAnsIndex = Math.trunc(Math.random() * wrongLength);
+      if (!wrongAnsIndexes.includes(randomAnsIndex)) {
+        wrongAnsIndexes.push(randomAnsIndex);
+      }
     }
-    const randomPlace = Math.trunc(Math.random() * num);
-    arr[randomPlace] = correct - 1;
-    const allAnswers = arr.map((num) => cards[num].answer);
-    return allAnswers;
+    console.log(wrongAnsIndexes);
+    const AllAns = wrongAnsIndexes.map(
+      (index) => cardsWithoutCorrect[index].answer,
+    );
+    const rightAnsPosition = Math.trunc(Math.random() * num);
+    AllAns[rightAnsPosition] = correct.answer;
+    return AllAns;
   }
   showAnswers();
 }
@@ -190,21 +251,30 @@ submitBtn.addEventListener("click", () => {
   }
 
   console.log("User chose:", selected.value);
-  console.log(cards[randomQ - 1].answer);
-  if (selected.value === cards[randomQ - 1].answer) {
+  console.log(cards[randomIndex].answer);
+  if (selected.value === cards[randomIndex].answer) {
     console.log("correct answer");
+    cards[randomIndex].rightAnswers += 1;
   } else {
     console.log("wrong answer");
+    cards[randomIndex].wrongAnswers += 1;
   }
+  console.log(cards);
 });
 
 function updateUI() {
   pickQuestionAndAnswers();
 }
 
+function skipQ() {
+  cards[randomIndex].skipped += 1;
+
+  updateUI();
+}
+
 // console.log(pairs(data.words, data.definitions));
 
-nextBtn.addEventListener("click", updateUI);
+nextBtn.addEventListener("click", skipQ);
 
 updateUI();
 
