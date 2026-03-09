@@ -113,6 +113,7 @@ const ansText = document.querySelector(".ans");
 const list = document.querySelector(".wordlist");
 const nextBtn = document.querySelector(".next_btn");
 const submitBtn = document.querySelector(".submit");
+const feedback = document.querySelector(".feedback");
 
 console.log(data);
 
@@ -138,15 +139,19 @@ const cards = data.qs.map((word, i) => ({
   skipped: 0,
   rightAnswers: 0,
   wrongAnswers: 0,
+  accuracy: 0,
+  wrongTries: 0,
 }));
 
 const qLentgh = cards.length;
-let randomIndex;
-
+let chosenCard;
+let firstWrong = false;
+let currentTries = 0;
 // choose a random number between 0 - qLength
 // show the quesion text by index qLength -1 becuase indexes start from 0.
 
 function chooseQuestion() {
+  let randomIndex;
   // make sure questions cycle without repetition before full cycle
   // check the highest appeared value and only allow questions with lower appered value show
   //if all appered values are equal then choose random from all cards.
@@ -160,16 +165,16 @@ function chooseQuestion() {
   if (sortedQuestions.length > 0) {
     randomIndex = Math.trunc(Math.random() * sortedQuestions.length);
     console.log(randomIndex);
-    const card = sortedQuestions[randomIndex];
-    qText.textContent = card.question;
-    card.appeared += 1;
-    console.log("sorted", card);
+    chosenCard = sortedQuestions[randomIndex];
+    qText.textContent = chosenCard.question;
+    chosenCard.appeared += 1;
+    console.log("sorted", chosenCard);
   } else {
     randomIndex = Math.trunc(Math.random() * qLentgh);
-    const card = cards[randomIndex];
-    qText.textContent = card.question;
-    card.appeared += 1;
-    console.log("not sorted", card);
+    chosenCard = cards[randomIndex];
+    qText.textContent = chosenCard.question;
+    chosenCard.appeared += 1;
+    console.log("not sorted", chosenCard);
   }
 }
 
@@ -190,7 +195,7 @@ function pickQuestionAndAnswers() {
     });
   }
 
-  const answers = chooseAnswers(4, cards[randomIndex]);
+  const answers = chooseAnswers(4, chosenCard);
 
   //   function chooseAnswers(num, correct) {
   //     console.log(correct);
@@ -242,37 +247,68 @@ function pickQuestionAndAnswers() {
   showAnswers();
 }
 
-submitBtn.addEventListener("click", () => {
-  const selected = document.querySelector('input[name="answer"]:checked');
-
-  if (!selected) {
-    alert("Please choose an option");
-    return;
-  }
-
-  console.log("User chose:", selected.value);
-  console.log(cards[randomIndex].answer);
-  if (selected.value === cards[randomIndex].answer) {
-    console.log("correct answer");
-    cards[randomIndex].rightAnswers += 1;
-  } else {
-    console.log("wrong answer");
-    cards[randomIndex].wrongAnswers += 1;
-  }
-  console.log(cards);
-});
-
 function updateUI() {
+  firstWrong = false;
+  feedback.textContent = "";
   pickQuestionAndAnswers();
 }
 
-function skipQ() {
-  cards[randomIndex].skipped += 1;
-
+function skipQ(e) {
+  e.preventDefault();
+  chosenCard.skipped += 1;
   updateUI();
 }
 
 // console.log(pairs(data.words, data.definitions));
+
+submitBtn.addEventListener("click", (e) => {
+  e.preventDefault();
+  const selected = document.querySelector('input[name="answer"]:checked');
+
+  if (!selected) {
+    feedback.textContent = "בחר תשובה או דלג שאלה";
+    return;
+  }
+
+  console.log("User chose:", selected.value);
+  console.log(chosenCard.answer);
+  if (selected.value === chosenCard.answer) {
+    console.log("correct answer");
+    feedback.textContent = "כל הכבוד! תשובה נכונה";
+    console.log(firstWrong);
+    if (!firstWrong) {
+      chosenCard.rightAnswers += 1;
+      chosenCard.accuracy = chosenCard.rightAnswers / chosenCard.appeared;
+    }
+
+    updateUI();
+  } else {
+    let triesMsg;
+    console.log("wrong answer");
+    currentTries += 1;
+    chosenCard.wrongTries += 1;
+    if (!firstWrong) {
+      firstWrong = true;
+      chosenCard.wrongAnswers += 1;
+      chosenCard.accuracy = chosenCard.rightAnswers / chosenCard.appeared;
+    }
+    if (currentTries === 1) {
+      triesMsg = "טעות ראשונה";
+    } else if (currentTries === 2) {
+      triesMsg = "טעות שנייה";
+    } else if (currentTries === 2) {
+      triesMsg = "טעות שנייה";
+    } else if (currentTries === 3) {
+      triesMsg = "טעות שלישית";
+    } else if (currentTries === 4) {
+      triesMsg = "טעות רביעית";
+    } else if (currentTries >= 5) {
+      triesMsg = `טעות מספר ${currentTries} `;
+    }
+    feedback.textContent = `${triesMsg} נסה שוב או דלג שאלה`;
+  }
+  console.log(cards);
+});
 
 nextBtn.addEventListener("click", skipQ);
 
