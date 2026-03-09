@@ -109,6 +109,7 @@ const data = {
 };
 
 const qText = document.querySelector(".q");
+const qLabel = document.querySelector(".q_label");
 const ansText = document.querySelector(".ans");
 const list = document.querySelector(".wordlist");
 const nextBtn = document.querySelector(".next_btn");
@@ -141,9 +142,11 @@ const cards = data.qs.map((word, i) => ({
   wrongAnswers: 0,
   accuracy: 0,
   wrongTries: 0,
+  removed: false,
 }));
 
 const qLentgh = cards.length;
+let updatedCards;
 let chosenCard;
 let firstWrong = false;
 let currentTries = 0;
@@ -155,26 +158,39 @@ function chooseQuestion() {
   // make sure questions cycle without repetition before full cycle
   // check the highest appeared value and only allow questions with lower appered value show
   //if all appered values are equal then choose random from all cards.
-  const maxAppeared = cards
-    .slice()
-    .sort((a, b) => b.appeared - a.appeared)[0].appeared;
-  console.log(maxAppeared);
+  updatedCards = cards.filter((card) => !card.removed);
 
-  const sortedQuestions = cards.filter((card) => card.appeared < maxAppeared);
-  console.log(sortedQuestions);
-  if (sortedQuestions.length > 0) {
-    randomIndex = Math.trunc(Math.random() * sortedQuestions.length);
-    console.log(randomIndex);
-    chosenCard = sortedQuestions[randomIndex];
-    qText.textContent = chosenCard.question;
-    chosenCard.appeared += 1;
-    console.log("sorted", chosenCard);
+  if (updatedCards.length > 0) {
+    console.log(updatedCards);
+
+    const maxAppeared = updatedCards
+      .slice()
+      .sort((a, b) => b.appeared - a.appeared)[0].appeared;
+    console.log(maxAppeared);
+
+    const sortedQuestions = updatedCards.filter(
+      (card) => card.appeared < maxAppeared,
+    );
+    console.log(sortedQuestions);
+    if (sortedQuestions.length > 0) {
+      randomIndex = Math.trunc(Math.random() * sortedQuestions.length);
+      console.log(randomIndex);
+      chosenCard = sortedQuestions[randomIndex];
+      qText.textContent = chosenCard.question;
+      chosenCard.appeared += 1;
+      console.log("sorted", chosenCard);
+    } else {
+      randomIndex = Math.trunc(Math.random() * updatedCards.length);
+      chosenCard = updatedCards[randomIndex];
+      qText.textContent = chosenCard.question;
+      chosenCard.appeared += 1;
+      console.log("not sorted", chosenCard);
+    }
   } else {
-    randomIndex = Math.trunc(Math.random() * qLentgh);
-    chosenCard = cards[randomIndex];
-    qText.textContent = chosenCard.question;
-    chosenCard.appeared += 1;
-    console.log("not sorted", chosenCard);
+    feedback.textContent = "טוווווווב!!! אתה יודע את כל המילים יא גאון שכמוך";
+    qText.textContent = "";
+    list.style.display = "none";
+    qLabel.style.display = "none";
   }
 }
 
@@ -248,6 +264,7 @@ function pickQuestionAndAnswers() {
 }
 
 function updateUI() {
+  currentTries = 0;
   firstWrong = false;
   feedback.textContent = "";
   pickQuestionAndAnswers();
@@ -275,10 +292,15 @@ submitBtn.addEventListener("click", (e) => {
   if (selected.value === chosenCard.answer) {
     console.log("correct answer");
     feedback.textContent = "כל הכבוד! תשובה נכונה";
-    console.log(firstWrong);
     if (!firstWrong) {
       chosenCard.rightAnswers += 1;
       chosenCard.accuracy = chosenCard.rightAnswers / chosenCard.appeared;
+    }
+    if (
+      (chosenCard.accuracy === 1 && chosenCard.appeared >= 1) ||
+      (chosenCard.accuracy >= 0.85 && chosenCard.appeared >= 5)
+    ) {
+      chosenCard.removed = true;
     }
 
     updateUI();
