@@ -117,6 +117,7 @@ const submitBtn = document.querySelector(".submit");
 const feedback = document.querySelector(".feedback");
 const scoreStat = document.querySelector(".score_stat");
 const streakStat = document.querySelector(".streak_stat");
+const timer = document.querySelector(".time_stat");
 
 console.log(data);
 
@@ -259,6 +260,9 @@ function pickQuestionAndAnswers() {
 }
 
 function updateUI() {
+  timer.textContent = "00:00";
+  clearInterval(clock);
+  startTimer();
   currentTries = 0;
   firstWrong = false;
   feedback.textContent = "";
@@ -342,6 +346,21 @@ submitBtn.addEventListener("click", (e) => {
 });
 
 nextBtn.addEventListener("click", skipQ);
+
+let clock;
+
+function startTimer() {
+  let totalSeconds = 0;
+  let seconds = 0;
+  let minutes = 0;
+  function tick() {
+    totalSeconds += 1;
+    seconds = String(totalSeconds % 60).padStart(2, 0);
+    minutes = String(Math.floor(totalSeconds / 60)).padStart(2, 0);
+    timer.textContent = `${minutes}:${seconds}`;
+  }
+  clock = setInterval(tick, 1000);
+}
 
 updateUI();
 
