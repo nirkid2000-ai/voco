@@ -10,48 +10,48 @@ const data = {
     "חלון",
     "ביצה",
     "תיק",
-    // "אדום",
-    // "בשר",
-    // "לחם",
-    // "חלב",
-    // "בית",
-    // "דלת",
-    // "כיסא",
-    // "ספר",
-    // "עט",
-    // "מחברת",
-    // "עיר",
-    // "רחוב",
-    // "עץ",
-    // "פרח",
-    // "שמש",
-    // "ירח",
-    // "כוכב",
-    // "הר",
-    // "נהר",
-    // "ים",
-    // "חול",
-    // "רוח",
-    // "אש",
-    // "אדמה",
-    // "זהב",
-    // "כסף",
-    // "זמן",
-    // "יום",
-    // "לילה",
-    // "שנה",
-    // "חבר",
-    // "משפחה",
-    // "ילד",
-    // "ילדה",
-    // "אוכל",
-    // "שתייה",
-    // "שוק",
-    // "חנות",
-    // "מפתח",
-    // "טלפון",
-    // "מחשב",
-    // "עבודה",
+    "אדום",
+    "בשר",
+    "לחם",
+    "חלב",
+    "בית",
+    "דלת",
+    "כיסא",
+    "ספר",
+    "עט",
+    "מחברת",
+    "עיר",
+    "רחוב",
+    "עץ",
+    "פרח",
+    "שמש",
+    "ירח",
+    "כוכב",
+    "הר",
+    "נהר",
+    "ים",
+    "חול",
+    "רוח",
+    "אש",
+    "אדמה",
+    "זהב",
+    "כסף",
+    "זמן",
+    "יום",
+    "לילה",
+    "שנה",
+    "חבר",
+    "משפחה",
+    "ילד",
+    "ילדה",
+    "אוכל",
+    "שתייה",
+    "שוק",
+    "חנות",
+    "מפתח",
+    "טלפון",
+    "מחשב",
+    "עבודה",
   ],
 
   qs: [
@@ -60,9 +60,9 @@ const data = {
     "Boat",
     "Water",
     "Table",
-    "Window",
-    "Egg",
-    "Bag",
+    // "Window",
+    // "Egg",
+    // "Bag",
     // "Red",
     // "Meat",
     // "Bread",
@@ -115,6 +115,8 @@ const list = document.querySelector(".wordlist");
 const nextBtn = document.querySelector(".next_btn");
 const submitBtn = document.querySelector(".submit");
 const feedback = document.querySelector(".feedback");
+const scoreStat = document.querySelector(".score_stat");
+const streakStat = document.querySelector(".streak_stat");
 
 console.log(data);
 
@@ -139,53 +141,50 @@ const cards = data.qs.map((word, i) => ({
   appeared: 0,
   skipped: 0,
   rightAnswers: 0,
+  streak: 0,
   wrongAnswers: 0,
   accuracy: 0,
   wrongTries: 0,
   removed: false,
 }));
 
-const qLentgh = cards.length;
+// const qLentgh = cards.length;
 let updatedCards;
 let chosenCard;
 let firstWrong = false;
 let currentTries = 0;
+let globalStreak = 0;
+let globalScore = 0;
 // choose a random number between 0 - qLength
 // show the quesion text by index qLength -1 becuase indexes start from 0.
 
 function chooseQuestion() {
   let randomIndex;
+
+  // remove cards the uswe already know by specific critaeria
+
+  updatedCards = cards.filter((card) => !card.removed);
+
   // make sure questions cycle without repetition before full cycle
   // check the highest appeared value and only allow questions with lower appered value show
   //if all appered values are equal then choose random from all cards.
-  updatedCards = cards.filter((card) => !card.removed);
 
   if (updatedCards.length > 0) {
     console.log(updatedCards);
 
-    const maxAppeared = updatedCards
-      .slice()
-      .sort((a, b) => b.appeared - a.appeared)[0].appeared;
-    console.log(maxAppeared);
+    const minAppeared = Math.min(...updatedCards.map((card) => card.appeared));
+    console.log(minAppeared);
 
     const sortedQuestions = updatedCards.filter(
-      (card) => card.appeared < maxAppeared,
+      (card) => card.appeared === minAppeared,
     );
     console.log(sortedQuestions);
-    if (sortedQuestions.length > 0) {
-      randomIndex = Math.trunc(Math.random() * sortedQuestions.length);
-      console.log(randomIndex);
-      chosenCard = sortedQuestions[randomIndex];
-      qText.textContent = chosenCard.question;
-      chosenCard.appeared += 1;
-      console.log("sorted", chosenCard);
-    } else {
-      randomIndex = Math.trunc(Math.random() * updatedCards.length);
-      chosenCard = updatedCards[randomIndex];
-      qText.textContent = chosenCard.question;
-      chosenCard.appeared += 1;
-      console.log("not sorted", chosenCard);
-    }
+    randomIndex = Math.floor(Math.random() * sortedQuestions.length);
+    console.log(randomIndex);
+    chosenCard = sortedQuestions[randomIndex];
+    qText.textContent = chosenCard.question;
+    chosenCard.appeared += 1;
+    console.log("sorted", chosenCard);
   } else {
     feedback.textContent = "טוווווווב!!! אתה יודע את כל המילים יא גאון שכמוך";
     qText.textContent = "";
@@ -243,19 +242,15 @@ function pickQuestionAndAnswers() {
   // }
 
   function chooseAnswers(num, correct) {
-    const cardsWithoutCorrect = cards.filter((x) => x !== correct);
-    const wrongAnsIndexes = [];
-    const wrongLength = cardsWithoutCorrect.length;
-    while (num > wrongAnsIndexes.length) {
-      const randomAnsIndex = Math.trunc(Math.random() * wrongLength);
-      if (!wrongAnsIndexes.includes(randomAnsIndex)) {
-        wrongAnsIndexes.push(randomAnsIndex);
+    const wrongAnswers = [];
+    while (num > wrongAnswers.length) {
+      const randomAns = data.ans[Math.floor(Math.random() * data.ans.length)];
+      if (!wrongAnswers.includes(randomAns) && randomAns !== correct.answer) {
+        wrongAnswers.push(randomAns);
       }
     }
-    console.log(wrongAnsIndexes);
-    const AllAns = wrongAnsIndexes.map(
-      (index) => cardsWithoutCorrect[index].answer,
-    );
+    console.log(wrongAnswers);
+    const AllAns = wrongAnswers;
     const rightAnsPosition = Math.trunc(Math.random() * num);
     AllAns[rightAnsPosition] = correct.answer;
     return AllAns;
@@ -294,19 +289,33 @@ submitBtn.addEventListener("click", (e) => {
     feedback.textContent = "כל הכבוד! תשובה נכונה";
     if (!firstWrong) {
       chosenCard.rightAnswers += 1;
+      chosenCard.streak += 1;
+      globalStreak += 1;
+      streakStat.textContent = `${globalStreak}`;
       chosenCard.accuracy = chosenCard.rightAnswers / chosenCard.appeared;
     }
+    if (currentTries === 0) {
+      globalScore += 50;
+    } else if (currentTries === 1) {
+      globalScore += 25;
+    } else {
+      globalScore += 5;
+    }
     if (
-      (chosenCard.accuracy === 1 && chosenCard.appeared >= 1) ||
+      chosenCard.streak === 2 ||
       (chosenCard.accuracy >= 0.85 && chosenCard.appeared >= 5)
     ) {
       chosenCard.removed = true;
     }
+    scoreStat.textContent = `${globalScore}`;
 
     updateUI();
   } else {
     let triesMsg;
     console.log("wrong answer");
+    chosenCard.streak = 0;
+    globalStreak = 0;
+    streakStat.textContent = `${globalStreak}`;
     currentTries += 1;
     chosenCard.wrongTries += 1;
     if (!firstWrong) {

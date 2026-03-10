@@ -1,0 +1,10 @@
+.app {
+  background-color: bisque;
+  text-align: right;
+  direction: rtl;
+}
+
+.btns {
+  display: flex;
+  gap: 10px;
+}
