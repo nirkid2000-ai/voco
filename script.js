@@ -2,109 +2,205 @@
 
 const data = {
   ans: [
-    "כלב",
-    "חתול",
-    "סירה",
-    "מים",
-    "שולחן",
-    "חלון",
-    "ביצה",
-    "תיק",
-    "אדום",
-    "בשר",
-    "לחם",
-    "חלב",
-    "בית",
-    "דלת",
-    "כיסא",
-    "ספר",
-    "עט",
-    "מחברת",
-    "עיר",
-    "רחוב",
-    "עץ",
-    "פרח",
-    "שמש",
-    "ירח",
-    "כוכב",
-    "הר",
-    "נהר",
-    "ים",
-    "חול",
-    "רוח",
-    "אש",
-    "אדמה",
-    "זהב",
-    "כסף",
-    "זמן",
-    "יום",
-    "לילה",
-    "שנה",
-    "חבר",
-    "משפחה",
-    "ילד",
-    "ילדה",
-    "אוכל",
-    "שתייה",
-    "שוק",
-    "חנות",
-    "מפתח",
-    "טלפון",
-    "מחשב",
-    "עבודה",
+    "דיוק",
+    "יכולת הסתגלות",
+    "ניתוח",
+    "הערכה",
+    "הטיה",
+    "בהירות",
+    "לכידות",
+    "עקביות",
+    "סתירה",
+    "אמינות",
+    "ביקורת",
+    "ציניות",
+    "ניכוי",
+    "הידרדרות",
+    "התלבטות",
+    "חריצות",
+    "שיח",
+    "עיוות",
+    "שליטה",
+    "יעילות",
+    "שוויון",
+    "הגזמה",
+    "ניצול",
+    "היתכנות",
+    "שטף",
+    "ניסוח",
+    "הכללה",
+    "השערה",
+    "אידיאולוגיה",
+    "אשליה",
+    "השלכה",
+    "תמריץ",
+    "הסקה",
+    "תחכום",
+    "יושרה",
+    "התערבות",
+    "אינטואיציה",
+    "אירוניה",
+    "הצדקה",
+    "היסוס",
+    "המחשה",
+    "מורשת",
+    "לגיטימיות",
+    "תחזוקה",
+    "מניפולציה",
+    "בשלה",
+    "מיתוס",
+    "ניואנס",
+    "ציות",
+    "התיישנות",
+    "פרדוקס",
+    "דיוק",
+    "התמדה",
+    "שכנוע",
+    "פסימיות",
+    "רלוונטיות",
+    "חוסן",
+    "איפוק",
+    "קשיחות",
+    "הקרבה",
+    "סקפטיות",
+    "יציבות",
+    "השערה",
+    "קיימות",
+    "סמליות",
+    "טקטיקה",
+    "סובלנות",
+    "שקיפות",
+    "תועלת",
+    "תוקף",
+    "רבגוניות",
+    "חולשה",
+    "חוכמה",
+    "שאפתנות",
+    "בהירות",
+    "אמינות",
+    "מסירות",
+    "חריגות",
+    "דחיפות",
+    "הסלמה",
+    "הערכה",
+    "היסוס",
+    "עוין",
+    "אדישות",
+    "הטמעה",
+    "דחף",
+    "התרשמות",
+    "חדשנות",
+    "חקירה",
+    "בידוד",
+    "התמדה",
+    "דיוק",
+    "דומיננטיות",
+    "תפיסה מוטעית",
+    "הפרעה",
+    "יריבות",
+    "התעלות",
+    "פגיעות",
   ],
 
   qs: [
-    "Dog",
-    "Cat",
-    "Boat",
-    "Water",
-    "Table",
-    // "Window",
-    // "Egg",
-    // "Bag",
-    // "Red",
-    // "Meat",
-    // "Bread",
-    // "Milk",
-    // "House",
-    // "Door",
-    // "Chair",
-    // "Book",
-    // "Pen",
-    // "Notebook",
-    // "City",
-    // "Street",
-    // "Tree",
-    // "Flower",
-    // "Sun",
-    // "Moon",
-    // "Star",
-    // "Mountain",
-    // "River",
-    // "Sea",
-    // "Sand",
-    // "Wind",
-    // "Fire",
-    // "Earth",
-    // "Gold",
-    // "Silver",
-    // "Time",
-    // "Day",
-    // "Night",
-    // "Year",
-    // "Friend",
-    // "Family",
-    // "Boy",
-    // "Girl",
-    // "Food",
-    // "Drink",
-    // "Market",
-    // "Shop",
-    // "Key",
-    // "Phone",
-    // "Computer",
-    // "Work",
+    "Precision",
+    "Adaptability",
+    "Analysis",
+    "Assessment",
+    "Bias",
+    "Clarity",
+    "Coherence",
+    "Consistency",
+    "Contradiction",
+    "Credibility",
+    "Criticism",
+    "Cynicism",
+    "Deduction",
+    "Deterioration",
+    "Dilemma",
+    "Diligence",
+    "Discourse",
+    "Distortion",
+    "Dominance",
+    "Effectiveness",
+    "Equality",
+    "Exaggeration",
+    "Exploitation",
+    "Feasibility",
+    "Fluency",
+    "Formulation",
+    "Generalization",
+    "Hypothesis",
+    "Ideology",
+    "Illusion",
+    "Implication",
+    "Incentive",
+    "Inference",
+    "Ingenuity",
+    "Integrity",
+    "Intervention",
+    "Intuition",
+    "Irony",
+    "Justification",
+    "Reluctance",
+    "Illustration",
+    "Legacy",
+    "Legitimacy",
+    "Maintenance",
+    "Manipulation",
+    "Maturity",
+    "Myth",
+    "Nuance",
+    "Obedience",
+    "Obsolescence",
+    "Paradox",
+    "Accuracy",
+    "Perseverance",
+    "Persuasion",
+    "Pessimism",
+    "Relevance",
+    "Resilience",
+    "Restraint",
+    "Rigidity",
+    "Sacrifice",
+    "Skepticism",
+    "Stability",
+    "Speculation",
+    "Sustainability",
+    "Symbolism",
+    "Tactic",
+    "Tolerance",
+    "Transparency",
+    "Utility",
+    "Validity",
+    "Versatility",
+    "Vulnerability",
+    "Wisdom",
+    "Aspiration",
+    "Certainty",
+    "Reliability",
+    "Dedication",
+    "Deviation",
+    "Urgency",
+    "Escalation",
+    "Appraisal",
+    "Hesitation",
+    "Hostility",
+    "Indifference",
+    "Assimilation",
+    "Impulse",
+    "Impression",
+    "Innovation",
+    "Inquiry",
+    "Isolation",
+    "Persistence",
+    "Exactness",
+    "Supremacy",
+    "Misconception",
+    "Disruption",
+    "Rivalry",
+    "Transcendence",
+    "Fragility",
   ],
 };
 
@@ -118,6 +214,7 @@ const feedback = document.querySelector(".feedback");
 const scoreStat = document.querySelector(".score_stat");
 const streakStat = document.querySelector(".streak_stat");
 const timer = document.querySelector(".time_stat");
+const totalFrom = document.querySelector(".total_from");
 
 console.log(data);
 
@@ -135,10 +232,24 @@ console.log(data);
 //   return obj;
 // }, {});
 
+function set_word_status(word) {
+  if (this.appeared === 1) {
+    return "מילה חדשה";
+  } else if (this.appeared > 1 && this.removed) {
+    return "נלמדה";
+  } else {
+    return "בתהליך למידה";
+  }
+}
+
+// if (data.qs.length !== data.ans.length)
+//   throw new Error("Questions and answers mismatch");
+
 const cards = data.qs.map((word, i) => ({
   id: i + 1,
   question: word,
   answer: data.ans[i],
+  word_status: "new",
   appeared: 0,
   skipped: 0,
   rightAnswers: 0,
@@ -147,6 +258,9 @@ const cards = data.qs.map((word, i) => ({
   accuracy: 0,
   wrongTries: 0,
   removed: false,
+  removedTime: 0,
+  removedStreak: 0,
+  deleted: false,
 }));
 
 // const qLentgh = cards.length;
@@ -156,11 +270,27 @@ let firstWrong = false;
 let currentTries = 0;
 let globalStreak = 0;
 let globalScore = 0;
+let coolDown = 2500;
+let totalCorrect = 0;
+let totalQs = 0;
 // choose a random number between 0 - qLength
 // show the quesion text by index qLength -1 becuase indexes start from 0.
 
 function chooseQuestion() {
   let randomIndex;
+
+  //recover removed cards after cooldwown
+  for (const card of cards) {
+    if (!card.removed) continue;
+    console.log("check");
+    //   console.log(card.removed);
+    const coolDownCalc = coolDown * card.removedStreak;
+    console.log(coolDownCalc, card.removedStreak);
+    if (Date.now() - card.removedTime > coolDownCalc) {
+      card.removed = false;
+      card.removedTime = null;
+    }
+  }
 
   // remove cards the uswe already know by specific critaeria
 
@@ -181,11 +311,11 @@ function chooseQuestion() {
     );
     console.log(sortedQuestions);
     randomIndex = Math.floor(Math.random() * sortedQuestions.length);
-    console.log(randomIndex);
     chosenCard = sortedQuestions[randomIndex];
     qText.textContent = chosenCard.question;
     chosenCard.appeared += 1;
     console.log("sorted", chosenCard);
+    set_word_status.call(chosenCard);
   } else {
     feedback.textContent = "טוווווווב!!! אתה יודע את כל המילים יא גאון שכמוך";
     qText.textContent = "";
@@ -261,7 +391,7 @@ function pickQuestionAndAnswers() {
 
 function updateUI() {
   timer.textContent = "00:00";
-  clearInterval(clock);
+  if (clock) clearInterval(clock);
   startTimer();
   currentTries = 0;
   firstWrong = false;
@@ -295,21 +425,28 @@ submitBtn.addEventListener("click", (e) => {
       chosenCard.rightAnswers += 1;
       chosenCard.streak += 1;
       globalStreak += 1;
+      totalCorrect += 1;
+
       streakStat.textContent = `${globalStreak}`;
       chosenCard.accuracy = chosenCard.rightAnswers / chosenCard.appeared;
     }
     if (currentTries === 0) {
-      globalScore += 50;
+      globalScore += 100;
     } else if (currentTries === 1) {
-      globalScore += 25;
+      globalScore += 60;
     } else {
-      globalScore += 5;
+      globalScore += 20;
     }
-    if (
-      chosenCard.streak === 2 ||
-      (chosenCard.accuracy >= 0.85 && chosenCard.appeared >= 5)
-    ) {
+    if (globalStreak === 5) globalScore += 200;
+    if (globalStreak === 10) globalScore += 400;
+    if (globalStreak === 25) globalScore += 600;
+    if (globalStreak === 50) globalScore *= 2;
+    if (globalStreak === 100) globalScore *= 3;
+
+    if (chosenCard.streak >= 1) {
       chosenCard.removed = true;
+      chosenCard.removedTime = Date.now();
+      chosenCard.removedStreak += 1;
     }
     scoreStat.textContent = `${globalScore}`;
 
@@ -317,6 +454,9 @@ submitBtn.addEventListener("click", (e) => {
   } else {
     let triesMsg;
     console.log("wrong answer");
+    chosenCard.removed = false;
+    chosenCard.removedTime = null;
+    chosenCard.removedStreak = 0;
     chosenCard.streak = 0;
     globalStreak = 0;
     streakStat.textContent = `${globalStreak}`;
@@ -331,8 +471,6 @@ submitBtn.addEventListener("click", (e) => {
       triesMsg = "טעות ראשונה";
     } else if (currentTries === 2) {
       triesMsg = "טעות שנייה";
-    } else if (currentTries === 2) {
-      triesMsg = "טעות שנייה";
     } else if (currentTries === 3) {
       triesMsg = "טעות שלישית";
     } else if (currentTries === 4) {
@@ -342,6 +480,11 @@ submitBtn.addEventListener("click", (e) => {
     }
     feedback.textContent = `${triesMsg} נסה שוב או דלג שאלה`;
   }
+  if (!firstWrong) {
+    totalQs += 1;
+    totalFrom.textContent = `${totalCorrect} מתוך ${totalQs}`;
+  }
+
   console.log(cards);
 });
 
