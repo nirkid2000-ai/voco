@@ -1,208 +1,5 @@
 "use strict";
-
-const data = {
-  ans: [
-    "דיוק",
-    "יכולת הסתגלות",
-    "ניתוח",
-    "הערכה",
-    "הטיה",
-    "בהירות",
-    "לכידות",
-    "עקביות",
-    "סתירה",
-    "אמינות",
-    "ביקורת",
-    "ציניות",
-    "ניכוי",
-    "הידרדרות",
-    "התלבטות",
-    "חריצות",
-    "שיח",
-    "עיוות",
-    "שליטה",
-    "יעילות",
-    "שוויון",
-    "הגזמה",
-    "ניצול",
-    "היתכנות",
-    "שטף",
-    "ניסוח",
-    "הכללה",
-    "השערה",
-    "אידיאולוגיה",
-    "אשליה",
-    "השלכה",
-    "תמריץ",
-    "הסקה",
-    "תחכום",
-    "יושרה",
-    "התערבות",
-    "אינטואיציה",
-    "אירוניה",
-    "הצדקה",
-    "היסוס",
-    "המחשה",
-    "מורשת",
-    "לגיטימיות",
-    "תחזוקה",
-    "מניפולציה",
-    "בשלה",
-    "מיתוס",
-    "ניואנס",
-    "ציות",
-    "התיישנות",
-    "פרדוקס",
-    "דיוק",
-    "התמדה",
-    "שכנוע",
-    "פסימיות",
-    "רלוונטיות",
-    "חוסן",
-    "איפוק",
-    "קשיחות",
-    "הקרבה",
-    "סקפטיות",
-    "יציבות",
-    "השערה",
-    "קיימות",
-    "סמליות",
-    "טקטיקה",
-    "סובלנות",
-    "שקיפות",
-    "תועלת",
-    "תוקף",
-    "רבגוניות",
-    "חולשה",
-    "חוכמה",
-    "שאפתנות",
-    "בהירות",
-    "אמינות",
-    "מסירות",
-    "חריגות",
-    "דחיפות",
-    "הסלמה",
-    "הערכה",
-    "היסוס",
-    "עוין",
-    "אדישות",
-    "הטמעה",
-    "דחף",
-    "התרשמות",
-    "חדשנות",
-    "חקירה",
-    "בידוד",
-    "התמדה",
-    "דיוק",
-    "דומיננטיות",
-    "תפיסה מוטעית",
-    "הפרעה",
-    "יריבות",
-    "התעלות",
-    "פגיעות",
-  ],
-
-  qs: [
-    "Precision",
-    "Adaptability",
-    "Analysis",
-    "Assessment",
-    "Bias",
-    "Clarity",
-    "Coherence",
-    "Consistency",
-    "Contradiction",
-    "Credibility",
-    "Criticism",
-    "Cynicism",
-    "Deduction",
-    "Deterioration",
-    "Dilemma",
-    "Diligence",
-    "Discourse",
-    "Distortion",
-    "Dominance",
-    "Effectiveness",
-    "Equality",
-    "Exaggeration",
-    "Exploitation",
-    "Feasibility",
-    "Fluency",
-    "Formulation",
-    "Generalization",
-    "Hypothesis",
-    "Ideology",
-    "Illusion",
-    "Implication",
-    "Incentive",
-    "Inference",
-    "Ingenuity",
-    "Integrity",
-    "Intervention",
-    "Intuition",
-    "Irony",
-    "Justification",
-    "Reluctance",
-    "Illustration",
-    "Legacy",
-    "Legitimacy",
-    "Maintenance",
-    "Manipulation",
-    "Maturity",
-    "Myth",
-    "Nuance",
-    "Obedience",
-    "Obsolescence",
-    "Paradox",
-    "Accuracy",
-    "Perseverance",
-    "Persuasion",
-    "Pessimism",
-    "Relevance",
-    "Resilience",
-    "Restraint",
-    "Rigidity",
-    "Sacrifice",
-    "Skepticism",
-    "Stability",
-    "Speculation",
-    "Sustainability",
-    "Symbolism",
-    "Tactic",
-    "Tolerance",
-    "Transparency",
-    "Utility",
-    "Validity",
-    "Versatility",
-    "Vulnerability",
-    "Wisdom",
-    "Aspiration",
-    "Certainty",
-    "Reliability",
-    "Dedication",
-    "Deviation",
-    "Urgency",
-    "Escalation",
-    "Appraisal",
-    "Hesitation",
-    "Hostility",
-    "Indifference",
-    "Assimilation",
-    "Impulse",
-    "Impression",
-    "Innovation",
-    "Inquiry",
-    "Isolation",
-    "Persistence",
-    "Exactness",
-    "Supremacy",
-    "Misconception",
-    "Disruption",
-    "Rivalry",
-    "Transcendence",
-    "Fragility",
-  ],
-};
+import data from "/dataset.js";
 
 const qText = document.querySelector(".q");
 const qLabel = document.querySelector(".q_label");
@@ -215,8 +12,7 @@ const scoreStat = document.querySelector(".score_stat");
 const streakStat = document.querySelector(".streak_stat");
 const timer = document.querySelector(".time_stat");
 const totalFrom = document.querySelector(".total_from");
-
-console.log(data);
+const feedbackBg = document.querySelector(".feedbackbg");
 
 // const pairs = (arr1, arr2) => arr1.map((item, i) => [item, arr2[i]]);
 
@@ -232,31 +28,33 @@ console.log(data);
 //   return obj;
 // }, {});
 
-function set_word_status(word) {
-  if (this.appeared === 1) {
-    return "מילה חדשה";
-  } else if (this.appeared > 1 && this.removed) {
-    return "נלמדה";
-  } else {
-    return "בתהליך למידה";
-  }
-}
+// function set_word_status(word) {
+//   if (this.appeared === 1) {
+//     this.word_status = "מילה חדשה";
+//   } else if (this.appeared > 1 && this.removed) {
+//     this.word_status = "נלמדה";
+//   } else {
+//     this.word_status = "בתהליך למידה";
+//   }
+// }
 
 // if (data.qs.length !== data.ans.length)
 //   throw new Error("Questions and answers mismatch");
 
-const cards = data.qs.map((word, i) => ({
+const cards = data.words.slice(100, 105).map((word, i) => ({
   id: i + 1,
-  question: word,
-  answer: data.ans[i],
+  question: word.en,
+  answer: word.he,
   word_status: "new",
   appeared: 0,
   skipped: 0,
   rightAnswers: 0,
-  streak: 0,
+  wordStreak: 0,
+  levelStreak: 0,
   wrongAnswers: 0,
   accuracy: 0,
   wrongTries: 0,
+  recalls: [],
   removed: false,
   removedTime: 0,
   removedStreak: 0,
@@ -266,13 +64,16 @@ const cards = data.qs.map((word, i) => ({
 // const qLentgh = cards.length;
 let updatedCards;
 let chosenCard;
-let firstWrong = false;
+let firstTry = true;
 let currentTries = 0;
 let globalStreak = 0;
 let globalScore = 0;
 let coolDown = 2500;
 let totalCorrect = 0;
 let totalQs = 0;
+let currentSession = new Map();
+let startTime;
+let answerTime;
 // choose a random number between 0 - qLength
 // show the quesion text by index qLength -1 becuase indexes start from 0.
 
@@ -314,8 +115,8 @@ function chooseQuestion() {
     chosenCard = sortedQuestions[randomIndex];
     qText.textContent = chosenCard.question;
     chosenCard.appeared += 1;
-    console.log("sorted", chosenCard);
-    set_word_status.call(chosenCard);
+    console.log(chosenCard);
+    // set_word_status.call(chosenCard);
   } else {
     feedback.textContent = "טוווווווב!!! אתה יודע את כל המילים יא גאון שכמוך";
     qText.textContent = "";
@@ -332,7 +133,7 @@ function pickQuestionAndAnswers() {
     answers.forEach((answer) => {
       list.innerHTML += `
     <li>
-      <label>
+      <label class="answer_label">
         <input type="radio" name="answer" value="${answer}">
         ${answer}
       </label>
@@ -340,6 +141,12 @@ function pickQuestionAndAnswers() {
   `;
     });
   }
+
+  list.addEventListener("change", (e) => {
+    if (e.target.name === "answer") {
+      submitBtn.classList.remove("inactive");
+    }
+  });
 
   const answers = chooseAnswers(4, chosenCard);
 
@@ -375,7 +182,8 @@ function pickQuestionAndAnswers() {
   function chooseAnswers(num, correct) {
     const wrongAnswers = [];
     while (num > wrongAnswers.length) {
-      const randomAns = data.ans[Math.floor(Math.random() * data.ans.length)];
+      const randomAns =
+        data.words[Math.floor(Math.random() * data.words.length)].he;
       if (!wrongAnswers.includes(randomAns) && randomAns !== correct.answer) {
         wrongAnswers.push(randomAns);
       }
@@ -390,13 +198,14 @@ function pickQuestionAndAnswers() {
 }
 
 function updateUI() {
-  timer.textContent = "00:00";
-  if (clock) clearInterval(clock);
+  console.log(currentSession);
+  feedbackBg.classList.remove("correct_bg");
   startTimer();
   currentTries = 0;
-  firstWrong = false;
+  firstTry = true;
   feedback.textContent = "";
   pickQuestionAndAnswers();
+  submitBtn.classList.add("inactive");
 }
 
 function skipQ(e) {
@@ -412,7 +221,7 @@ submitBtn.addEventListener("click", (e) => {
   const selected = document.querySelector('input[name="answer"]:checked');
 
   if (!selected) {
-    feedback.textContent = "בחר תשובה או דלג שאלה";
+    feedback.textContent = "לא נבחרה תשובה";
     return;
   }
 
@@ -421,14 +230,41 @@ submitBtn.addEventListener("click", (e) => {
   if (selected.value === chosenCard.answer) {
     console.log("correct answer");
     feedback.textContent = "כל הכבוד! תשובה נכונה";
-    if (!firstWrong) {
+
+    if (firstTry) {
       chosenCard.rightAnswers += 1;
-      chosenCard.streak += 1;
+      chosenCard.wordStreak += 1;
+      chosenCard.levelStreak += 1;
       globalStreak += 1;
       totalCorrect += 1;
+      totalQs += 1;
+      totalFrom.textContent = `${totalCorrect} מתוך ${totalQs}`;
 
       streakStat.textContent = `${globalStreak}`;
       chosenCard.accuracy = chosenCard.rightAnswers / chosenCard.appeared;
+      if (chosenCard.word_status === "unknown") {
+        chosenCard.word_status = "recognized";
+        chosenCard.levelStreak = 0;
+      }
+
+      if (chosenCard.word_status === "new") {
+        chosenCard.word_status = "recognized";
+        chosenCard.levelStreak = 0;
+      }
+
+      if (
+        chosenCard.word_status === "recognized" &&
+        chosenCard.levelStreak >= 2
+      ) {
+        chosenCard.word_status = "known";
+        chosenCard.levelStreak = 0;
+      }
+      if (chosenCard.word_status === "known" && chosenCard.levelStreak >= 3) {
+        chosenCard.word_status = "mastered";
+        chosenCard.levelStreak = 0;
+      }
+
+      currentSession.set(chosenCard.id, chosenCard);
     }
     if (currentTries === 0) {
       globalScore += 100;
@@ -443,30 +279,67 @@ submitBtn.addEventListener("click", (e) => {
     if (globalStreak === 50) globalScore *= 2;
     if (globalStreak === 100) globalScore *= 3;
 
-    if (chosenCard.streak >= 1) {
+    if (chosenCard.wordStreak >= 1) {
       chosenCard.removed = true;
       chosenCard.removedTime = Date.now();
       chosenCard.removedStreak += 1;
     }
     scoreStat.textContent = `${globalScore}`;
+    feedbackBg.classList.add("correct_bg");
+    const duration = performance.now() - startTime;
+    chosenCard.recalls.push(Math.floor(duration));
+    console.log(chosenCard);
 
-    updateUI();
+    timer.textContent = "00:00";
+    if (clock) clearInterval(clock);
+    setTimeout(updateUI, 1000);
   } else {
     let triesMsg;
+    const label = selected.closest("li");
+    setTimeout(() => {
+      feedbackBg.classList.remove("wrong_bg");
+      feedback.textContent = "";
+    }, 1000);
+    feedbackBg.classList.add("wrong_bg");
     console.log("wrong answer");
+    submitBtn.classList.add("inactive");
+    label.classList.add("wrong");
+    selected.disabled = true;
+    selected.checked = false;
     chosenCard.removed = false;
     chosenCard.removedTime = null;
     chosenCard.removedStreak = 0;
-    chosenCard.streak = 0;
+    chosenCard.wordStreak = 0;
     globalStreak = 0;
     streakStat.textContent = `${globalStreak}`;
     currentTries += 1;
     chosenCard.wrongTries += 1;
-    if (!firstWrong) {
-      firstWrong = true;
+    if (firstTry) {
+      firstTry = false;
       chosenCard.wrongAnswers += 1;
       chosenCard.accuracy = chosenCard.rightAnswers / chosenCard.appeared;
+      totalQs += 1;
+      totalFrom.textContent = `${totalCorrect} מתוך ${totalQs}`;
+      if (chosenCard.word_status === "new") {
+        chosenCard.word_status = "unknown";
+        chosenCard.levelStreak = 0;
+      }
+      if (chosenCard.word_status === "recognized") {
+        chosenCard.word_status = "unknown";
+        chosenCard.levelStreak = 0;
+      }
+      if (chosenCard.word_status === "known") {
+        chosenCard.word_status = "recognized";
+        chosenCard.levelStreak = 0;
+      }
+      if (chosenCard.word_status === "mastered") {
+        chosenCard.word_status = "known";
+        chosenCard.levelStreak = 0;
+      }
+
+      currentSession.set(chosenCard.id, chosenCard);
     }
+    chosenCard.levelStreak = 0;
     if (currentTries === 1) {
       triesMsg = "טעות ראשונה";
     } else if (currentTries === 2) {
@@ -478,11 +351,7 @@ submitBtn.addEventListener("click", (e) => {
     } else if (currentTries >= 5) {
       triesMsg = `טעות מספר ${currentTries} `;
     }
-    feedback.textContent = `${triesMsg} נסה שוב או דלג שאלה`;
-  }
-  if (!firstWrong) {
-    totalQs += 1;
-    totalFrom.textContent = `${totalCorrect} מתוך ${totalQs}`;
+    feedback.textContent = `${triesMsg} נסה שוב`;
   }
 
   console.log(cards);
@@ -493,6 +362,8 @@ nextBtn.addEventListener("click", skipQ);
 let clock;
 
 function startTimer() {
+  startTime = performance.now();
+  console.log(startTime);
   let totalSeconds = 0;
   let seconds = 0;
   let minutes = 0;
