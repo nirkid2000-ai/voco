@@ -1,5 +1,5 @@
 "use strict";
-import data from "/dataset.js";
+import data from "/dataset_c2.js";
 
 const qText = document.querySelector(".q");
 const qLabel = document.querySelector(".q_label");
@@ -41,7 +41,7 @@ const feedbackBg = document.querySelector(".feedbackbg");
 // if (data.qs.length !== data.ans.length)
 //   throw new Error("Questions and answers mismatch");
 
-const cards = data.words.slice(100, 105).map((word, i) => ({
+const cards = data.words.map((word, i) => ({
   id: i + 1,
   question: word.en,
   answer: word.he,
@@ -55,11 +55,55 @@ const cards = data.words.slice(100, 105).map((word, i) => ({
   accuracy: 0,
   wrongTries: 0,
   recalls: [],
+  coolDown: null,
+  onCooldown: false,
+  cooldownUntil: null,
   removed: false,
   removedTime: 0,
   removedStreak: 0,
   deleted: false,
 }));
+
+const STATUS = {
+  NEW: "new",
+  UNKNOWN: "unknown",
+  RECOGNIZED: "recognized",
+  KNOWN: "known",
+  MASTERED: "mastered",
+};
+
+//days / hours / (mins) / seconds
+
+86400000 / 24 / 60;
+
+const COOLDOWNSUNITS = {
+  COOLDAYS: 86400000,
+  COOLHOURS: 86400000 / 24,
+  COOLMINUTES: 86400000 / 24 / 60,
+};
+
+const COOLDOWNS = {
+  new: {
+    0: 0,
+  },
+  unknown: {
+    0: 10 * COOLDOWNSUNITS.COOLMINUTES,
+  },
+  recognized: {
+    0: 12 * COOLDOWNSUNITS.COOLHOURS,
+    1: 2 * COOLDOWNSUNITS.COOLDAYS,
+  },
+  known: {
+    0: 7 * COOLDOWNSUNITS.COOLDAYS,
+    1: 14 * COOLDOWNSUNITS.COOLDAYS,
+    2: 30 * COOLDOWNSUNITS.COOLDAYS,
+  },
+  mastered: {
+    0: 60 * COOLDOWNSUNITS.COOLDAYS,
+    1: 120 * COOLDOWNSUNITS.COOLDAYS,
+    2: 240 * COOLDOWNSUNITS.COOLDAYS,
+  },
+};
 
 // const qLentgh = cards.length;
 let updatedCards;
@@ -81,21 +125,25 @@ function chooseQuestion() {
   let randomIndex;
 
   //recover removed cards after cooldwown
+  //   for (const card of cards) {
+  //     if (!card.removed) continue;
+  //     console.log("check");
+  //   console.log(card.removed);
+  //     const coolDownCalc = coolDown * card.removedStreak;
+  //     console.log(coolDownCalc, card.removedStreak);
+  //     if (Date.now() - card.removedTime > coolDownCalc) {
+  //       card.removed = false;
+  //       card.removedTime = null;
+  //     }
+  //   }
   for (const card of cards) {
-    if (!card.removed) continue;
-    console.log("check");
-    //   console.log(card.removed);
-    const coolDownCalc = coolDown * card.removedStreak;
-    console.log(coolDownCalc, card.removedStreak);
-    if (Date.now() - card.removedTime > coolDownCalc) {
-      card.removed = false;
-      card.removedTime = null;
-    }
+    if (!card.onCooldown) continue;
+    if (Date.now() >= card.cooldownUntil) card.onCooldown = false;
   }
 
   // remove cards the uswe already know by specific critaeria
 
-  updatedCards = cards.filter((card) => !card.removed);
+  updatedCards = cards.filter((card) => !card.onCooldown);
 
   // make sure questions cycle without repetition before full cycle
   // check the highest appeared value and only allow questions with lower appered value show
@@ -216,8 +264,342 @@ function skipQ(e) {
 
 // console.log(pairs(data.words, data.definitions));
 
+// submitBtn.addEventListener("click", (e) => {
+//   e.preventDefault();
+//   const selected = document.querySelector('input[name="answer"]:checked');
+
+//   if (!selected) {
+//     feedback.textContent = "לא נבחרה תשובה";
+//     return;
+//   }
+
+//   console.log("User chose:", selected.value);
+//   console.log(chosenCard.answer);
+//   if (selected.value === chosenCard.answer) {
+//     console.log("correct answer");
+//     feedback.textContent = "כל הכבוד! תשובה נכונה";
+
+//     if (firstTry) {
+//       chosenCard.rightAnswers += 1;
+//       chosenCard.wordStreak += 1;
+//       chosenCard.levelStreak += 1;
+//       globalStreak += 1;
+//       totalCorrect += 1;
+//       totalQs += 1;
+//       totalFrom.textContent = `${totalCorrect} מתוך ${totalQs}`;
+
+//       streakStat.textContent = `${globalStreak}`;
+//       chosenCard.accuracy = chosenCard.rightAnswers / chosenCard.appeared;
+//       if (chosenCard.word_status === "unknown") {
+//         chosenCard.word_status = "recognized";
+//         chosenCard.levelStreak = 0;
+//       }
+
+//       if (chosenCard.word_status === "new") {
+//         chosenCard.word_status = "recognized";
+//         chosenCard.levelStreak = 0;
+//       }
+
+//       if (
+//         chosenCard.word_status === "recognized" &&
+//         chosenCard.levelStreak >= 2
+//       ) {
+//         chosenCard.word_status = "known";
+//         chosenCard.levelStreak = 0;
+//       }
+//       if (chosenCard.word_status === "known" && chosenCard.levelStreak >= 3) {
+//         chosenCard.word_status = "mastered";
+//         chosenCard.levelStreak = 0;
+//       }
+
+//       currentSession.set(chosenCard.id, chosenCard);
+//     }
+//     if (currentTries === 0) {
+//       globalScore += 100;
+//     } else if (currentTries === 1) {
+//       globalScore += 60;
+//     } else {
+//       globalScore += 20;
+//     }
+//     if (globalStreak === 5) globalScore += 200;
+//     if (globalStreak === 10) globalScore += 400;
+//     if (globalStreak === 25) globalScore += 600;
+//     if (globalStreak === 50) globalScore *= 2;
+//     if (globalStreak === 100) globalScore *= 3;
+
+//     if (chosenCard.wordStreak >= 1) {
+//       chosenCard.removed = true;
+//       chosenCard.removedTime = Date.now();
+//       chosenCard.removedStreak += 1;
+//     }
+//     scoreStat.textContent = `${globalScore}`;
+//     feedbackBg.classList.add("correct_bg");
+//     const duration = performance.now() - startTime;
+//     chosenCard.recalls.push(Math.floor(duration));
+//     console.log(chosenCard);
+
+//     timer.textContent = "00:00";
+//     if (clock) clearInterval(clock);
+//     setTimeout(updateUI, 1000);
+//   } else {
+//     let triesMsg;
+//     const label = selected.closest("li");
+//     setTimeout(() => {
+//       feedbackBg.classList.remove("wrong_bg");
+//       feedback.textContent = "";
+//     }, 1000);
+//     feedbackBg.classList.add("wrong_bg");
+//     console.log("wrong answer");
+//     submitBtn.classList.add("inactive");
+//     label.classList.add("wrong");
+//     selected.disabled = true;
+//     selected.checked = false;
+//     chosenCard.removed = false;
+//     chosenCard.removedTime = null;
+//     chosenCard.removedStreak = 0;
+//     chosenCard.wordStreak = 0;
+//     globalStreak = 0;
+//     streakStat.textContent = `${globalStreak}`;
+//     currentTries += 1;
+//     chosenCard.wrongTries += 1;
+//     if (firstTry) {
+//       firstTry = false;
+//       chosenCard.wrongAnswers += 1;
+//       chosenCard.accuracy = chosenCard.rightAnswers / chosenCard.appeared;
+//       totalQs += 1;
+//       totalFrom.textContent = `${totalCorrect} מתוך ${totalQs}`;
+//       if (chosenCard.word_status === "new") {
+//         chosenCard.word_status = "unknown";
+//         chosenCard.levelStreak = 0;
+//       }
+//       if (chosenCard.word_status === "recognized") {
+//         chosenCard.word_status = "unknown";
+//         chosenCard.levelStreak = 0;
+//       }
+//       if (chosenCard.word_status === "known") {
+//         chosenCard.word_status = "recognized";
+//         chosenCard.levelStreak = 0;
+//       }
+//       if (chosenCard.word_status === "mastered") {
+//         chosenCard.word_status = "known";
+//         chosenCard.levelStreak = 0;
+//       }
+
+//       currentSession.set(chosenCard.id, chosenCard);
+//     }
+//     chosenCard.levelStreak = 0;
+//     if (currentTries === 1) {
+//       triesMsg = "טעות ראשונה";
+//     } else if (currentTries === 2) {
+//       triesMsg = "טעות שנייה";
+//     } else if (currentTries === 3) {
+//       triesMsg = "טעות שלישית";
+//     } else if (currentTries === 4) {
+//       triesMsg = "טעות רביעית";
+//     } else if (currentTries >= 5) {
+//       triesMsg = `טעות מספר ${currentTries} `;
+//     }
+//     feedback.textContent = `${triesMsg} נסה שוב`;
+//   }
+
+//   console.log(cards);
+// });
+
+function updateAccuracy(card) {
+  card.accuracy = card.appeared > 0 ? card.rightAnswers / card.appeared : 0;
+}
+
+function promoteCard(card) {
+  if (card.word_status === STATUS.NEW) {
+    card.word_status = STATUS.RECOGNIZED;
+    card.levelStreak = 0;
+    return;
+  }
+
+  if (card.word_status === STATUS.UNKNOWN) {
+    card.word_status = STATUS.RECOGNIZED;
+    card.levelStreak = 0;
+    return;
+  }
+
+  if (card.word_status === STATUS.RECOGNIZED && card.levelStreak >= 1) {
+    card.word_status = STATUS.KNOWN;
+    card.levelStreak = 0;
+    return;
+  }
+
+  if (card.word_status === STATUS.KNOWN && card.levelStreak >= 3) {
+    card.word_status = STATUS.MASTERED;
+    card.levelStreak = 0;
+  }
+}
+
+function demoteCard(card) {
+  if (card.word_status === STATUS.NEW) {
+    card.word_status = STATUS.UNKNOWN;
+    card.levelStreak = 0;
+    return;
+  }
+
+  if (card.word_status === STATUS.RECOGNIZED) {
+    card.word_status = STATUS.UNKNOWN;
+    card.levelStreak = 0;
+    return;
+  }
+
+  if (card.word_status === STATUS.KNOWN) {
+    card.word_status = STATUS.RECOGNIZED;
+    card.levelStreak = 0;
+    return;
+  }
+
+  if (card.word_status === STATUS.MASTERED) {
+    card.word_status = STATUS.KNOWN;
+    card.levelStreak = 0;
+  }
+}
+
+function getTriesMessage(tries) {
+  if (tries === 1) return "טעות ראשונה";
+  if (tries === 2) return "טעות שנייה";
+  if (tries === 3) return "טעות שלישית";
+  if (tries === 4) return "טעות רביעית";
+  return `טעות מספר ${tries}`;
+}
+
+function applyCorrectScore() {
+  if (currentTries === 0) {
+    globalScore += 100;
+  } else if (currentTries === 1) {
+    globalScore += 60;
+  } else {
+    globalScore += 20;
+  }
+
+  if (globalStreak === 5) globalScore += 200;
+  if (globalStreak === 10) globalScore += 400;
+  if (globalStreak === 25) globalScore += 600;
+  if (globalStreak === 50) globalScore *= 2;
+  if (globalStreak === 100) globalScore *= 3;
+}
+
+function markCardRemoved(card) {
+  // Choose ONE streak field and use it consistently.
+  // Here I assume wordStreak is the correct one.
+  if (card.wordStreak >= 1) {
+    card.removed = true;
+    card.removedTime = Date.now();
+    card.removedStreak += 1;
+  }
+}
+
+function resetCardRemoval(card) {
+  card.removed = false;
+  card.removedTime = null;
+  card.removedStreak = 0;
+  card.wordStreak = 0;
+}
+
+function handleFirstTryCorrect(card) {
+  card.rightAnswers += 1;
+  card.wordStreak += 1;
+  card.levelStreak += 1;
+
+  globalStreak += 1;
+  totalCorrect += 1;
+  totalQs += 1;
+
+  updateAccuracy(card);
+  promoteCard(card);
+  currentSession.set(card.id, card);
+
+  totalFrom.textContent = `${totalCorrect} מתוך ${totalQs}`;
+  streakStat.textContent = `${globalStreak}`;
+}
+
+function handleFirstTryWrong(card) {
+  firstTry = false;
+
+  card.wrongAnswers += 1;
+  card.levelStreak = 0;
+  card.wrongTries += 1;
+
+  globalStreak = 0;
+  totalQs += 1;
+
+  updateAccuracy(card);
+  demoteCard(card);
+  currentSession.set(card.id, card);
+
+  totalFrom.textContent = `${totalCorrect} מתוך ${totalQs}`;
+  streakStat.textContent = `${globalStreak}`;
+}
+
+function handleCorrectAnswer(card) {
+  console.log("correct answer");
+  feedback.textContent = "כל הכבוד! תשובה נכונה";
+
+  if (firstTry) {
+    handleFirstTryCorrect(card);
+  }
+
+  applyCorrectScore();
+  markCardRemoved(card);
+
+  scoreStat.textContent = `${globalScore}`;
+  feedbackBg.classList.add("correct_bg");
+
+  const duration = performance.now() - startTime;
+  card.recalls.push(Math.floor(duration));
+
+  timer.textContent = "00:00";
+  if (clock) clearInterval(clock);
+
+  console.log(card);
+
+  setTimeout(() => {
+    feedbackBg.classList.remove("correct_bg");
+    updateUI();
+  }, 1000);
+}
+
+function handleWrongAnswer(card, selected) {
+  console.log("wrong answer");
+
+  const label = selected.closest("li");
+
+  feedbackBg.classList.add("wrong_bg");
+  submitBtn.classList.add("inactive");
+
+  if (label) label.classList.add("wrong");
+
+  selected.disabled = true;
+  selected.checked = false;
+
+  resetCardRemoval(card);
+
+  globalStreak = 0;
+  streakStat.textContent = `${globalStreak}`;
+
+  currentTries += 1;
+
+  if (firstTry) {
+    handleFirstTryWrong(card);
+  } else {
+    card.wrongTries += 1;
+  }
+
+  feedback.textContent = `${getTriesMessage(currentTries)} נסה שוב`;
+
+  setTimeout(() => {
+    feedbackBg.classList.remove("wrong_bg");
+    feedback.textContent = "";
+  }, 1000);
+}
+
 submitBtn.addEventListener("click", (e) => {
   e.preventDefault();
+
   const selected = document.querySelector('input[name="answer"]:checked');
 
   if (!selected) {
@@ -226,134 +608,18 @@ submitBtn.addEventListener("click", (e) => {
   }
 
   console.log("User chose:", selected.value);
-  console.log(chosenCard.answer);
+  console.log("Correct answer:", chosenCard.answer);
+
   if (selected.value === chosenCard.answer) {
-    console.log("correct answer");
-    feedback.textContent = "כל הכבוד! תשובה נכונה";
-
-    if (firstTry) {
-      chosenCard.rightAnswers += 1;
-      chosenCard.wordStreak += 1;
-      chosenCard.levelStreak += 1;
-      globalStreak += 1;
-      totalCorrect += 1;
-      totalQs += 1;
-      totalFrom.textContent = `${totalCorrect} מתוך ${totalQs}`;
-
-      streakStat.textContent = `${globalStreak}`;
-      chosenCard.accuracy = chosenCard.rightAnswers / chosenCard.appeared;
-      if (chosenCard.word_status === "unknown") {
-        chosenCard.word_status = "recognized";
-        chosenCard.levelStreak = 0;
-      }
-
-      if (chosenCard.word_status === "new") {
-        chosenCard.word_status = "recognized";
-        chosenCard.levelStreak = 0;
-      }
-
-      if (
-        chosenCard.word_status === "recognized" &&
-        chosenCard.levelStreak >= 2
-      ) {
-        chosenCard.word_status = "known";
-        chosenCard.levelStreak = 0;
-      }
-      if (chosenCard.word_status === "known" && chosenCard.levelStreak >= 3) {
-        chosenCard.word_status = "mastered";
-        chosenCard.levelStreak = 0;
-      }
-
-      currentSession.set(chosenCard.id, chosenCard);
-    }
-    if (currentTries === 0) {
-      globalScore += 100;
-    } else if (currentTries === 1) {
-      globalScore += 60;
-    } else {
-      globalScore += 20;
-    }
-    if (globalStreak === 5) globalScore += 200;
-    if (globalStreak === 10) globalScore += 400;
-    if (globalStreak === 25) globalScore += 600;
-    if (globalStreak === 50) globalScore *= 2;
-    if (globalStreak === 100) globalScore *= 3;
-
-    if (chosenCard.wordStreak >= 1) {
-      chosenCard.removed = true;
-      chosenCard.removedTime = Date.now();
-      chosenCard.removedStreak += 1;
-    }
-    scoreStat.textContent = `${globalScore}`;
-    feedbackBg.classList.add("correct_bg");
-    const duration = performance.now() - startTime;
-    chosenCard.recalls.push(Math.floor(duration));
-    console.log(chosenCard);
-
-    timer.textContent = "00:00";
-    if (clock) clearInterval(clock);
-    setTimeout(updateUI, 1000);
+    handleCorrectAnswer(chosenCard);
   } else {
-    let triesMsg;
-    const label = selected.closest("li");
-    setTimeout(() => {
-      feedbackBg.classList.remove("wrong_bg");
-      feedback.textContent = "";
-    }, 1000);
-    feedbackBg.classList.add("wrong_bg");
-    console.log("wrong answer");
-    submitBtn.classList.add("inactive");
-    label.classList.add("wrong");
-    selected.disabled = true;
-    selected.checked = false;
-    chosenCard.removed = false;
-    chosenCard.removedTime = null;
-    chosenCard.removedStreak = 0;
-    chosenCard.wordStreak = 0;
-    globalStreak = 0;
-    streakStat.textContent = `${globalStreak}`;
-    currentTries += 1;
-    chosenCard.wrongTries += 1;
-    if (firstTry) {
-      firstTry = false;
-      chosenCard.wrongAnswers += 1;
-      chosenCard.accuracy = chosenCard.rightAnswers / chosenCard.appeared;
-      totalQs += 1;
-      totalFrom.textContent = `${totalCorrect} מתוך ${totalQs}`;
-      if (chosenCard.word_status === "new") {
-        chosenCard.word_status = "unknown";
-        chosenCard.levelStreak = 0;
-      }
-      if (chosenCard.word_status === "recognized") {
-        chosenCard.word_status = "unknown";
-        chosenCard.levelStreak = 0;
-      }
-      if (chosenCard.word_status === "known") {
-        chosenCard.word_status = "recognized";
-        chosenCard.levelStreak = 0;
-      }
-      if (chosenCard.word_status === "mastered") {
-        chosenCard.word_status = "known";
-        chosenCard.levelStreak = 0;
-      }
-
-      currentSession.set(chosenCard.id, chosenCard);
-    }
-    chosenCard.levelStreak = 0;
-    if (currentTries === 1) {
-      triesMsg = "טעות ראשונה";
-    } else if (currentTries === 2) {
-      triesMsg = "טעות שנייה";
-    } else if (currentTries === 3) {
-      triesMsg = "טעות שלישית";
-    } else if (currentTries === 4) {
-      triesMsg = "טעות רביעית";
-    } else if (currentTries >= 5) {
-      triesMsg = `טעות מספר ${currentTries} `;
-    }
-    feedback.textContent = `${triesMsg} נסה שוב`;
+    handleWrongAnswer(chosenCard, selected);
   }
 
+  const coolDown = COOLDOWNS[chosenCard.word_status]?.[chosenCard.levelStreak];
+  if (coolDown > 0) chosenCard.onCooldown = true;
+  chosenCard.coolDown = coolDown;
+  chosenCard.cooldownUntil = Date.now() + coolDown;
   console.log(cards);
 });
 

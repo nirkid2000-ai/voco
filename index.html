@@ -8,16 +8,23 @@
   </head>
   <body>
     <div class="app">
-      <div class="questions">
-        <div class="q_label">מה פירוש המילה בעברית?</div>
-        <div class="q">שאלה</div>
+      <div class="feedbackbg">
+        <div class="questions">
+          <div class="q_label">מה פירוש המילה?</div>
+          <div class="q">שאלה</div>
+        </div>
+        <div class="answers">
+          <div class="wordlist"></div>
+        </div>
+        <div class="feedback">
+          <label>User Feedback </label>
+        </div>
+        <div class="btns">
+          <button class="submit inactive">בחר תשובה</button>
+          <button class="next_btn">דלג שאלה</button>
+        </div>
       </div>
-      <div class="answers">
-        <div class="wordlist"></div>
-      </div>
-      <div class="feedback">
-        <label>User Feedback </label>
-      </div>
+
       <div class="timer">
         <label>זמן שעבר:<span class="time_stat">00:00</span> </label>
       </div>
@@ -30,16 +37,8 @@
       <div class="score">
         <label>ניקוד:<span class="score_stat">0</span> </label>
       </div>
-      <div class="btns">
-        <div class="submit">
-          <button>בחר תשובה</button>
-        </div>
-        <div class="next_btn">
-          <button>דלג שאלה</button>
-        </div>
-      </div>
     </div>
 
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
   </body>
 </html>
