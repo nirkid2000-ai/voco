@@ -6,8 +6,6 @@ const qLabel = document.querySelector(".q_label");
 const list = document.querySelector(".wordlist");
 const nextBtn = document.querySelector(".next_btn");
 const submitMainBtn = document.querySelector(".main_ans");
-const submitKnowBtn = document.querySelector(".know_ans");
-const submitGuessBtn = document.querySelector(".guess_ans");
 const knowOrGuess = document.querySelector(".knoworguess");
 const feedback = document.querySelector(".feedback");
 const scoreStat = document.querySelector(".score_stat");
@@ -16,48 +14,11 @@ const timer = document.querySelector(".time_stat");
 const totalFrom = document.querySelector(".total_from");
 const feedbackBg = document.querySelector(".feedbackbg");
 
-const STATUS = {
-  NEW: "new",
-  UNKNOWN: "unknown",
-  RECOGNIZED: "recognized",
-  KNOWN: "known",
-  MASTERED: "mastered",
-};
-
-const TIME = {
-  DAY: 86400000,
-  HOUR: 86400000 / 24,
-  MINUTE: 86400000 / 24 / 60,
-};
-
-const COOLDOWNS = {
-  new: {
-    0: 0,
-  },
-  unknown: {
-    0: 10 * TIME.MINUTE,
-  },
-  recognized: {
-    0: 12 * TIME.HOUR,
-    1: 1 * TIME.DAY,
-  },
-  known: {
-    0: 2 * TIME.DAY,
-    1: 3 * TIME.DAY,
-    2: 5 * TIME.DAY,
-  },
-  mastered: {
-    0: 7 * TIME.DAY,
-    1: 14 * TIME.DAY,
-    2: 21 * TIME.DAY,
-  },
-};
-
 const cards = data.words.map((word, i) => ({
   id: i + 1,
   question: word.en,
   answer: word.he,
-  word_status: STATUS.NEW,
+  word_status: "new",
   appeared: 0,
   skipped: 0,
   rightAnswers: 0,
@@ -71,89 +32,177 @@ const cards = data.words.map((word, i) => ({
   onCooldown: false,
   cooldownUntil: null,
   removed: false,
-  removedTime: null,
+  removedTime: 0,
   removedStreak: 0,
   deleted: false,
 }));
 
-let chosenCard = null;
-let updatedCards = [];
+const STATUS = {
+  NEW: "new",
+  UNKNOWN: "unknown",
+  RECOGNIZED: "recognized",
+  KNOWN: "known",
+  MASTERED: "mastered",
+};
+
+//days / hours / (mins) / seconds
+
+86400000 / 24 / 60;
+
+const COOLDOWNSUNITS = {
+  COOLDAYS: 86400000,
+  COOLHOURS: 86400000 / 24,
+  COOLMINUTES: 86400000 / 24 / 60,
+};
+
+const COOLDOWNS = {
+  new: {
+    0: 0,
+  },
+  unknown: {
+    0: 10 * COOLDOWNSUNITS.COOLMINUTES,
+  },
+  recognized: {
+    0: 12 * COOLDOWNSUNITS.COOLHOURS,
+    1: 1 * COOLDOWNSUNITS.COOLDAYS,
+  },
+  known: {
+    0: 2 * COOLDOWNSUNITS.COOLDAYS,
+    1: 3 * COOLDOWNSUNITS.COOLDAYS,
+    2: 5 * COOLDOWNSUNITS.COOLDAYS,
+  },
+  mastered: {
+    0: 7 * COOLDOWNSUNITS.COOLDAYS,
+    1: 14 * COOLDOWNSUNITS.COOLDAYS,
+    2: 21 * COOLDOWNSUNITS.COOLDAYS,
+  },
+};
+
+let updatedCards;
+let chosenCard;
 let firstTry = true;
 let currentTries = 0;
 let globalStreak = 0;
 let globalScore = 0;
 let correctGuesses = 0;
 let totalGuesses = 0;
+let coolDown = 2500;
 let totalCorrect = 0;
 let totalQs = 0;
 let currentSession = new Map();
-let startTime = 0;
-let clock = null;
+let startTime;
+let answerTime;
 
-/* -------------------- helpers -------------------- */
+function chooseQuestion() {
+  let randomIndex;
 
-function updateStatsUI() {
-  scoreStat.textContent = `${globalScore}`;
-  streakStat.textContent = `${globalStreak}`;
-  totalFrom.textContent = `${totalCorrect} מתוך ${totalQs} (ניחושים ${correctGuesses}/${totalGuesses})`;
+  for (const card of cards) {
+    if (!card.onCooldown) continue;
+    if (Date.now() >= card.cooldownUntil) card.onCooldown = false;
+  }
+
+  // remove cards the uswe already know by specific critaeria
+
+  updatedCards = cards.filter((card) => !card.onCooldown);
+
+  // make sure questions cycle without repetition before full cycle
+  // check the highest appeared value and only allow questions with lower appered value show
+  //if all appered values are equal then choose random from all cards.
+
+  if (updatedCards.length > 0) {
+    console.log(updatedCards);
+
+    const minAppeared = Math.min(...updatedCards.map((card) => card.appeared));
+    console.log(minAppeared);
+
+    const sortedQuestions = updatedCards.filter(
+      (card) => card.appeared === minAppeared,
+    );
+    console.log(sortedQuestions);
+    randomIndex = Math.floor(Math.random() * sortedQuestions.length);
+    chosenCard = sortedQuestions[randomIndex];
+    qText.textContent = chosenCard.question;
+    chosenCard.appeared += 1;
+    console.log(chosenCard);
+    // set_word_status.call(chosenCard);
+  } else {
+    feedback.textContent = "טוווווווב!!! אתה יודע את כל המילים יא גאון שכמוך";
+    qText.textContent = "";
+    list.style.display = "none";
+    qLabel.style.display = "none";
+  }
 }
 
-function clearFeedbackState() {
-  feedback.textContent = "";
-  feedbackBg.classList.remove("correct_bg", "wrong_bg");
+function pickQuestionAndAnswers() {
+  chooseQuestion();
+  // uppdate 4 snaswers in a a list with radio buttons.
+  function showAnswers() {
+    list.textContent = "";
+    answers.forEach((answer) => {
+      list.innerHTML += `
+    <li>
+      <label class="answer_label">
+        <input type="radio" name="answer" value="${answer}">
+        ${answer}
+      </label>
+    </li>
+  `;
+    });
+  }
+
+  list.addEventListener("change", (e) => {
+    if (e.target.name === "answer") {
+      if (firstTry) {
+        submitMainBtn.classList.add("hidden");
+        knowOrGuess.classList.remove("hidden");
+      } else {
+        submitMainBtn.classList.remove("inactive");
+      }
+    }
+  });
+
+  const answers = chooseAnswers(4, chosenCard);
+
+  function chooseAnswers(num, correct) {
+    const wrongAnswers = [];
+    while (num > wrongAnswers.length) {
+      const randomAns =
+        data.words[Math.floor(Math.random() * data.words.length)].he;
+      if (!wrongAnswers.includes(randomAns) && randomAns !== correct.answer) {
+        wrongAnswers.push(randomAns);
+      }
+    }
+    console.log(wrongAnswers);
+    const AllAns = wrongAnswers;
+    const rightAnsPosition = Math.trunc(Math.random() * num);
+    AllAns[rightAnsPosition] = correct.answer;
+    return AllAns;
+  }
+  showAnswers();
 }
 
-function setSubmitStateInitial() {
-  submitMainBtn.classList.add("inactive");
-  submitMainBtn.classList.remove("hidden");
+function updateUI() {
+  console.log(currentSession);
+  feedbackBg.classList.remove("correct_bg");
   knowOrGuess.classList.add("hidden");
+  submitMainBtn.classList.remove("hidden");
+  startTimer();
+  currentTries = 0;
+  firstTry = true;
+  feedback.textContent = "";
+  pickQuestionAndAnswers();
+  submitMainBtn.classList.add("inactive");
 }
 
-function getSelectedAnswer() {
-  return document.querySelector('input[name="answer"]:checked');
+function skipQ(e) {
+  e.preventDefault();
+  chosenCard.skipped += 1;
+  updateUI();
 }
 
 function updateAccuracy(card) {
   card.accuracy = card.appeared > 0 ? card.rightAnswers / card.appeared : 0;
 }
-
-function getCooldown(card) {
-  return COOLDOWNS[card.word_status]?.[card.levelStreak] ?? 0;
-}
-
-function applyCooldown(card) {
-  const coolDown = getCooldown(card);
-  card.coolDown = coolDown;
-  card.onCooldown = coolDown > 0;
-  card.cooldownUntil = Date.now() + coolDown;
-}
-
-function releaseExpiredCooldowns() {
-  for (const card of cards) {
-    if (!card.onCooldown) continue;
-    if (Date.now() >= card.cooldownUntil) {
-      card.onCooldown = false;
-      card.cooldownUntil = null;
-    }
-  }
-}
-
-function getAvailableCards() {
-  releaseExpiredCooldowns();
-  return cards.filter(
-    (card) => !card.onCooldown && !card.deleted && !card.removed,
-  );
-}
-
-function getTriesMessage(tries) {
-  if (tries === 1) return "טעות ראשונה";
-  if (tries === 2) return "טעות שנייה";
-  if (tries === 3) return "טעות שלישית";
-  if (tries === 4) return "טעות רביעית";
-  return `טעות מספר ${tries}`;
-}
-
-/* -------------------- progression -------------------- */
 
 function promoteCard(card) {
   if (card.word_status === STATUS.NEW) {
@@ -205,7 +254,13 @@ function demoteCard(card) {
   }
 }
 
-/* -------------------- score / removal -------------------- */
+function getTriesMessage(tries) {
+  if (tries === 1) return "טעות ראשונה";
+  if (tries === 2) return "טעות שנייה";
+  if (tries === 3) return "טעות שלישית";
+  if (tries === 4) return "טעות רביעית";
+  return `טעות מספר ${tries}`;
+}
 
 function applyCorrectScore() {
   if (currentTries === 0) {
@@ -224,6 +279,8 @@ function applyCorrectScore() {
 }
 
 function markCardRemoved(card) {
+  // Choose ONE streak field and use it consistently.
+  // Here I assume wordStreak is the correct one.
   if (card.wordStreak >= 1) {
     card.removed = true;
     card.removedTime = Date.now();
@@ -238,112 +295,11 @@ function resetCardRemoval(card) {
   card.wordStreak = 0;
 }
 
-/* -------------------- timer -------------------- */
-
-function stopTimer() {
-  if (clock) clearInterval(clock);
-  clock = null;
-  timer.textContent = "00:00";
-}
-
-function startTimer() {
-  stopTimer();
-  startTime = performance.now();
-
-  let totalSeconds = 0;
-
-  clock = setInterval(() => {
-    totalSeconds += 1;
-    const seconds = String(totalSeconds % 60).padStart(2, "0");
-    const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
-    timer.textContent = `${minutes}:${seconds}`;
-  }, 1000);
-}
-
-/* -------------------- question / answers -------------------- */
-
-function chooseQuestion() {
-  updatedCards = getAvailableCards();
-
-  if (updatedCards.length === 0) {
-    feedback.textContent = "טוווווווב!!! אתה יודע את כל המילים יא גאון שכמוך";
-    qText.textContent = "";
-    list.innerHTML = "";
-    list.style.display = "none";
-    qLabel.style.display = "none";
-    submitMainBtn.classList.add("hidden");
-    knowOrGuess.classList.add("hidden");
-    stopTimer();
-    return null;
-  }
-
-  const minAppeared = Math.min(...updatedCards.map((card) => card.appeared));
-  const candidates = updatedCards.filter(
-    (card) => card.appeared === minAppeared,
-  );
-  const randomIndex = Math.floor(Math.random() * candidates.length);
-
-  chosenCard = candidates[randomIndex];
-  chosenCard.appeared += 1;
-
-  qText.textContent = chosenCard.question;
-  list.style.display = "";
-  qLabel.style.display = "";
-
-  return chosenCard;
-}
-
-function chooseAnswers(num, correctCard) {
-  const wrongAnswers = [];
-
-  while (wrongAnswers.length < num) {
-    const randomAns =
-      data.words[Math.floor(Math.random() * data.words.length)].he;
-
-    if (!wrongAnswers.includes(randomAns) && randomAns !== correctCard.answer) {
-      wrongAnswers.push(randomAns);
-    }
-  }
-
-  const allAnswers = [...wrongAnswers];
-  const rightAnsPosition = Math.floor(Math.random() * num);
-  allAnswers[rightAnsPosition] = correctCard.answer;
-
-  return allAnswers;
-}
-
-function renderAnswers(answers) {
-  list.innerHTML = answers
-    .map(
-      (answer) => `
-        <li>
-          <label class="answer_label">
-            <input type="radio" name="answer" value="${answer}">
-            ${answer}
-          </label>
-        </li>
-      `,
-    )
-    .join("");
-}
-
-function pickQuestionAndAnswers() {
-  const card = chooseQuestion();
-  if (!card) return;
-
-  const answers = chooseAnswers(4, card);
-  renderAnswers(answers);
-}
-
-/* -------------------- answer logic -------------------- */
-
 function handleFirstTryCorrect(card, mode) {
   if (mode === "know") {
     card.levelStreak += 1;
     promoteCard(card);
-  }
-
-  if (mode === "guess") {
+  } else {
     correctGuesses += 1;
     totalGuesses += 1;
   }
@@ -357,14 +313,15 @@ function handleFirstTryCorrect(card, mode) {
 
   updateAccuracy(card);
   currentSession.set(card.id, card);
-  updateStatsUI();
+
+  totalFrom.textContent = `  ${totalCorrect} מתוך ${totalQs} (ניחושים ${correctGuesses})`;
+  streakStat.textContent = `${globalStreak}`;
 }
 
 function handleFirstTryWrong(card, mode) {
-  if (mode === "guess") {
+  if (mode === "know") {
     totalGuesses += 1;
   }
-
   firstTry = false;
   card.wrongAnswers += 1;
   card.levelStreak = 0;
@@ -376,12 +333,14 @@ function handleFirstTryWrong(card, mode) {
   updateAccuracy(card);
   demoteCard(card);
   currentSession.set(card.id, card);
-  updateStatsUI();
+
+  totalFrom.textContent = `  ${totalCorrect} מתוך ${totalQs} (ניחושים ${correctGuesses})`;
+  streakStat.textContent = `${globalStreak}`;
 }
 
 function handleCorrectAnswer(card, mode) {
+  console.log("correct answer");
   feedback.textContent = "כל הכבוד! תשובה נכונה";
-  feedbackBg.classList.add("correct_bg");
 
   if (firstTry) {
     handleFirstTryCorrect(card, mode);
@@ -390,43 +349,48 @@ function handleCorrectAnswer(card, mode) {
   applyCorrectScore();
   markCardRemoved(card);
 
+  scoreStat.textContent = `${globalScore}`;
+  feedbackBg.classList.add("correct_bg");
+
   const duration = performance.now() - startTime;
   card.recalls.push(Math.floor(duration));
 
-  scoreStat.textContent = `${globalScore}`;
-  stopTimer();
+  timer.textContent = "00:00";
+  if (clock) clearInterval(clock);
 
-  applyCooldown(card);
+  console.log(card);
 
   setTimeout(() => {
+    feedbackBg.classList.remove("correct_bg");
     updateUI();
   }, 1000);
 }
 
-function handleWrongAnswer(card, selected, mode) {
-  const li = selected.closest("li");
+function handleWrongAnswer(card, selected) {
+  console.log("wrong answer");
+
+  const label = selected.closest("li");
 
   feedbackBg.classList.add("wrong_bg");
   submitMainBtn.classList.add("inactive");
 
-  if (li) li.classList.add("wrong");
+  if (label) label.classList.add("wrong");
 
   selected.disabled = true;
   selected.checked = false;
 
   resetCardRemoval(card);
 
-  currentTries += 1;
-
-  if (firstTry) {
-    handleFirstTryWrong(card, mode);
-  } else {
-    card.wrongTries += 1;
-  }
-
   globalStreak = 0;
   streakStat.textContent = `${globalStreak}`;
 
+  currentTries += 1;
+
+  if (firstTry) {
+    handleFirstTryWrong(card);
+  } else {
+    card.wrongTries += 1;
+  }
   knowOrGuess.classList.add("hidden");
   submitMainBtn.classList.remove("hidden");
 
@@ -434,82 +398,58 @@ function handleWrongAnswer(card, selected, mode) {
 
   setTimeout(() => {
     feedbackBg.classList.remove("wrong_bg");
+    feedback.textContent = "";
   }, 1000);
 }
-
-/* -------------------- submit flow -------------------- */
-
-function submitAnswer(mode) {
-  if (!chosenCard) return;
-
-  const selected = getSelectedAnswer();
-
-  if (!selected) {
-    feedback.textContent = "לא נבחרה תשובה";
-    return;
-  }
-
-  const isCorrect = selected.value === chosenCard.answer;
-
-  if (isCorrect) {
-    handleCorrectAnswer(chosenCard, mode);
-  } else {
-    handleWrongAnswer(chosenCard, selected, mode);
-  }
-
-  console.log({
-    mode,
-    selected: selected.value,
-    correct: chosenCard.answer,
-    chosenCard,
-    cards,
-  });
-}
-
-/* -------------------- UI cycle -------------------- */
-
-function updateUI() {
-  console.log(currentSession);
-  clearFeedbackState();
-  currentTries = 0;
-  firstTry = true;
-  setSubmitStateInitial();
-  pickQuestionAndAnswers();
-  startTimer();
-}
-
-function skipQ(e) {
-  e.preventDefault();
-  if (!chosenCard) return;
-
-  chosenCard.skipped += 1;
-  updateUI();
-}
-
-/* -------------------- listeners -------------------- */
-
-list.addEventListener("change", (e) => {
-  if (e.target.name !== "answer") return;
-
-  if (firstTry) {
-    submitMainBtn.classList.add("hidden");
-    knowOrGuess.classList.remove("hidden");
-  } else {
-    submitMainBtn.classList.remove("inactive");
-  }
-});
 
 document.querySelectorAll(".submit").forEach((button) => {
   button.addEventListener("click", (e) => {
     e.preventDefault();
     const mode = e.currentTarget.dataset.mode;
-    submitAnswer(mode);
+    console.log(mode);
+
+    const selected = document.querySelector('input[name="answer"]:checked');
+
+    if (!selected) {
+      feedback.textContent = "לא נבחרה תשובה";
+      return;
+    }
+
+    console.log("User chose:", selected.value);
+    console.log("Correct answer:", chosenCard.answer);
+
+    if (selected.value === chosenCard.answer) {
+      handleCorrectAnswer(chosenCard, mode);
+    } else {
+      handleWrongAnswer(chosenCard, selected, mode);
+    }
+
+    const coolDown =
+      COOLDOWNS[chosenCard.word_status]?.[chosenCard.levelStreak];
+    if (coolDown > 0) chosenCard.onCooldown = true;
+    chosenCard.coolDown = coolDown;
+    chosenCard.cooldownUntil = Date.now() + coolDown;
+    console.log(cards);
   });
 });
 
 nextBtn.addEventListener("click", skipQ);
 
-/* -------------------- init -------------------- */
+let clock;
 
-updateStatsUI();
+function startTimer() {
+  startTime = performance.now();
+  console.log(startTime);
+  let totalSeconds = 0;
+  let seconds = 0;
+  let minutes = 0;
+  function tick() {
+    totalSeconds += 1;
+    seconds = String(totalSeconds % 60).padStart(2, 0);
+    minutes = String(Math.floor(totalSeconds / 60)).padStart(2, 0);
+    timer.textContent = `${minutes}:${seconds}`;
+  }
+  clock = setInterval(tick, 1000);
+}
+
 updateUI();
