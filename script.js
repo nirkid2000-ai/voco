@@ -37,6 +37,7 @@ const cards = data.words.slice(1, 10).map((word, i) => ({
   coolDown: THIRTY_SECONDS,
   onCooldown: false,
   cooldownUntil: null,
+  sinceCooldown: null,
   deleted: false,
 }));
 
@@ -75,7 +76,6 @@ const DIFFLEVELS = {
   C2: "90%",
 };
 
-let updatedCards;
 let chosenCard;
 let firstTry = true;
 let currentTries = 0;
@@ -92,50 +92,67 @@ let btnDisabled = false;
 
 function chooseQuestion() {
   let randomIndex;
+  let noCooldownsCards = [];
+  let fromCooldowns = [];
+  chosenCard = null;
+  const now = Date.now();
 
   for (const card of cards) {
     if (!card.onCooldown) continue;
-    if (Date.now() >= card.cooldownUntil) card.onCooldown = false;
+    if (now >= card.cooldownUntil) {
+      card.onCooldown = false;
+      card.sinceCooldown = now - card.cooldownUntil;
+      card.cooldownUntil = null;
+      fromCooldowns.push(card);
+    }
   }
 
-  // remove cards the uswe already know by specific critaeria
+  // remove cards the user already know by specific critaeria
 
-  updatedCards = cards.filter((card) => !card.onCooldown);
-
-  // make sure questions cycle without repetition before full cycle
-  // check the highest appeared value and only allow questions with lower appered value show
-  //if all appered values are equal then choose random from all cards.
-
-  if (updatedCards.length > 0) {
-    console.log(updatedCards);
-    const minAppeared = Math.min(...updatedCards.map((card) => card.appeared));
-
-    console.log(minAppeared);
-
-    const sortedQuestions = updatedCards.filter(
-      (card) => card.appeared === minAppeared,
+  if (fromCooldowns.length) {
+    chosenCard = fromCooldowns.reduce((longest, card) =>
+      card.sinceCooldown > longest.sinceCooldown ? card : longest,
     );
-    console.log(sortedQuestions);
-    randomIndex = Math.floor(Math.random() * sortedQuestions.length);
-    chosenCard = sortedQuestions[randomIndex];
-    chosenCard.appeared += 1;
-    qText.textContent = chosenCard.question;
-    starsFill.classList.remove("animate");
-    levelText.textContent = HEBSTATUS[chosenCard.word_status];
-    difArrow.style.left = DIFFLEVELS[chosenCard.diff];
-    starsFill.style.setProperty(
-      "--fill",
-      `${STARS[chosenCard.word_status + chosenCard.levelStreak]}%`,
-    );
-    console.log(`${STARS[chosenCard.word_status + chosenCard.levelStreak]}%`);
+  }
 
-    console.log(chosenCard);
-    // set_word_status.call(chosenCard);
-  } else {
-    feedback.textContent = "טוווווווב!!! אתה יודע את כל המילים יא גאון שכמוך";
-    qText.textContent = "";
-    list.style.display = "none";
-    qLabel.style.display = "none";
+  if (!chosenCard) {
+    noCooldownsCards = cards.filter((card) => !card.onCooldown);
+    if (noCooldownsCards.length > 0) {
+      console.log(noCooldownsCards);
+      const minAppeared = Math.min(
+        ...noCooldownsCards.map((card) => card.appeared),
+      );
+
+      console.log(minAppeared);
+
+      const sortedQuestions = noCooldownsCards.filter(
+        (card) => card.appeared === minAppeared,
+      );
+      randomIndex = Math.floor(Math.random() * sortedQuestions.length);
+      chosenCard = sortedQuestions[randomIndex];
+    }
+
+    // make sure questions cycle without repetition before full cycle
+    // check the highest appeared value and only allow questions with lower appered value show
+    //if all appered values are equal then choose random from all cards.
+    if (chosenCard) {
+      chosenCard.appeared += 1;
+      qText.textContent = chosenCard.question;
+      starsFill.classList.remove("animate");
+      levelText.textContent = HEBSTATUS[chosenCard.word_status];
+      difArrow.style.left = DIFFLEVELS[chosenCard.diff];
+      starsFill.style.setProperty(
+        "--fill",
+        `${STARS[chosenCard.word_status + chosenCard.levelStreak]}%`,
+      );
+
+      console.log(chosenCard);
+    } else {
+      feedback.textContent = "טוווווווב!!! אתה יודע את כל המילים יא גאון שכמוך";
+      qText.textContent = "";
+      list.style.display = "none";
+      qLabel.style.display = "none";
+    }
   }
 }
 
