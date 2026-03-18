@@ -143,17 +143,18 @@ function pickQuestionAndAnswers() {
   chooseQuestion();
   // uppdate 4 snaswers in a a list with radio buttons.
   function showAnswers() {
-    list.textContent = "";
-    answers.forEach((answer) => {
-      list.innerHTML += `
-    <li>
-      <label class="answer_label">
-        <input type="radio" name="answer" value="${answer}">
-        ${answer}
-      </label>
-    </li>
-  `;
-    });
+    list.innerHTML = answers
+      .map(
+        (answer) => `
+        <li>
+          <label class="answer_label">
+            <input type="radio" name="answer" value="${answer}">
+            ${answer}
+          </label>
+        </li>
+      `,
+      )
+      .join("");
   }
 
   const numberOfAns =
@@ -162,18 +163,6 @@ function pickQuestionAndAnswers() {
       : chosenCard.word_status === "mastered"
         ? 6
         : 4;
-
-  list.addEventListener("change", (e) => {
-    if (e.target.name === "answer") {
-      if (firstTry) {
-        submitMainBtn.classList.add("hidden");
-        knowOrGuess.classList.remove("hidden");
-      } else {
-        submitMainBtn.classList.remove("inactive");
-      }
-    }
-  });
-
   const answers = chooseAnswers(numberOfAns, chosenCard);
 
   function chooseAnswers(num, correct) {
@@ -194,7 +183,20 @@ function pickQuestionAndAnswers() {
   showAnswers();
 }
 
+list.addEventListener("change", (e) => {
+  if (e.target.name === "answer") {
+    if (firstTry) {
+      submitMainBtn.classList.add("hidden");
+      knowOrGuess.classList.remove("hidden");
+    } else {
+      submitMainBtn.classList.remove("inactive");
+    }
+  }
+});
+
 function updateUI() {
+  if (clock) clearInterval(clock);
+
   btnDisabled = false;
   document.querySelectorAll(".submit").forEach((button) => {
     button.disabled = false;
@@ -203,12 +205,12 @@ function updateUI() {
   feedbackBg.classList.remove("correct_bg");
   knowOrGuess.classList.add("hidden");
   submitMainBtn.classList.remove("hidden");
-  startTimer();
   currentTries = 0;
   firstTry = true;
   feedback.textContent = "";
   pickQuestionAndAnswers();
   submitMainBtn.classList.add("inactive");
+  startTimer();
 }
 
 function updateAccuracy(card) {
@@ -438,53 +440,46 @@ function applyCooldown(isCorrect, mode, timeToAnswer) {
 }
 
 document.querySelectorAll(".submit").forEach((button) => {
-  button.addEventListener("click", (e) => {
-    e.preventDefault();
-
-    if (btnDisabled) return;
-    btnDisabled = true;
-
-    const mode = e.currentTarget.dataset.mode;
-    console.log(mode);
-    starsFill.classList.add("animate");
-
-    const selected = document.querySelector('input[name="answer"]:checked');
-
-    const correctAns = selected?.value === chosenCard.answer;
-
-    if (!selected) {
-      btnDisabled = false;
-      feedback.textContent = "לא נבחרה תשובה";
-      setTimeout(() => (feedback.textContent = ""), 1000);
-      return;
-    }
-
-    const duration = performance.now() - startTime;
-    chosenCard.recalls.push(Math.floor(duration));
-
-    console.log("User chose:", selected.value);
-    console.log("Correct answer:", chosenCard.answer);
-
-    button.disabled = true;
-
-    if (correctAns) {
-      handleCorrectAnswer(chosenCard, mode);
-    } else {
-      handleWrongAnswer(chosenCard, selected, mode);
-
-      btnDisabled = false;
-      document.querySelectorAll(".submit").forEach((btn) => {
-        btn.disabled = false;
-        btn.style.pointerEvents = "";
-      });
-    }
-
-    applyCooldown(correctAns, mode, duration);
-
-    console.log(cards);
-  });
+  button.addEventListener("click", onSubmit);
 });
 
+function onSubmit(e) {
+  e.preventDefault();
+
+  const button = e.currentTarget;
+
+  if (btnDisabled) return;
+  btnDisabled = true;
+
+  const mode = button.dataset.mode;
+
+  const selected = document.querySelector('input[name="answer"]:checked');
+
+  if (!selected) {
+    btnDisabled = false;
+    feedback.textContent = "לא נבחרה תשובה";
+    setTimeout(() => (feedback.textContent = ""), 1000);
+    return;
+  }
+
+  const correctAns = selected.value === chosenCard.answer;
+  const duration = performance.now() - startTime;
+
+  button.disabled = true;
+
+  if (correctAns) {
+    handleCorrectAnswer(chosenCard, mode);
+  } else {
+    handleWrongAnswer(chosenCard, selected, mode);
+
+    btnDisabled = false;
+    document.querySelectorAll(".submit").forEach((btn) => {
+      btn.disabled = false;
+    });
+  }
+
+  applyCooldown(correctAns, mode, duration);
+}
 let clock;
 
 function startTimer() {
