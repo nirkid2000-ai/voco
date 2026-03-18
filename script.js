@@ -1,5 +1,5 @@
 "use strict";
-import data from "/dataset.js";
+import data from "/latvian.js";
 
 const qText = document.querySelector(".q");
 const levelText = document.querySelector(".word_level");
@@ -17,12 +17,12 @@ const feedbackBg = document.querySelector(".feedbackbg");
 const starsFill = document.querySelector(".stars-fill");
 
 const THIRTY_MINUTES = 30 * 60 * 1000;
-const THIRTY_SECONDS = 1000;
+const THIRTY_SECONDS = 10 * 1000;
 
 const cards = data.words.slice(1, 10).map((word, i) => ({
   id: i + 1,
-  question: word.en,
-  answer: word.he,
+  question: word.he,
+  answer: word.en,
   diff: word.level,
   word_status: "new",
   word_mastery: 0,
@@ -91,74 +91,71 @@ let answerTime;
 let btnDisabled = false;
 
 function chooseQuestion() {
+  console.log(cards);
   let randomIndex;
-  let noCooldownsCards = [];
   let fromCooldowns = [];
+
+  let noCooldownsCards = [];
   chosenCard = null;
   const now = Date.now();
 
   for (const card of cards) {
     if (!card.onCooldown) continue;
     if (now >= card.cooldownUntil) {
-      card.onCooldown = false;
       card.sinceCooldown = now - card.cooldownUntil;
-      card.cooldownUntil = null;
       fromCooldowns.push(card);
     }
   }
-
+  console.log(fromCooldowns);
   // remove cards the user already know by specific critaeria
 
   if (fromCooldowns.length) {
     chosenCard = fromCooldowns.reduce((longest, card) =>
       card.sinceCooldown > longest.sinceCooldown ? card : longest,
     );
+    console.log(chosenCard, "from cooldowns");
   }
 
   if (!chosenCard) {
     noCooldownsCards = cards.filter((card) => !card.onCooldown);
     if (noCooldownsCards.length > 0) {
-      console.log(noCooldownsCards);
       const minAppeared = Math.min(
         ...noCooldownsCards.map((card) => card.appeared),
       );
-
-      console.log(minAppeared);
 
       const sortedQuestions = noCooldownsCards.filter(
         (card) => card.appeared === minAppeared,
       );
       randomIndex = Math.floor(Math.random() * sortedQuestions.length);
       chosenCard = sortedQuestions[randomIndex];
+      console.log("not from cooldown", chosenCard);
     }
+  }
 
-    // make sure questions cycle without repetition before full cycle
-    // check the highest appeared value and only allow questions with lower appered value show
-    //if all appered values are equal then choose random from all cards.
-    if (chosenCard) {
-      chosenCard.appeared += 1;
-      qText.textContent = chosenCard.question;
-      starsFill.classList.remove("animate");
-      levelText.textContent = HEBSTATUS[chosenCard.word_status];
-      difArrow.style.left = DIFFLEVELS[chosenCard.diff];
-      starsFill.style.setProperty(
-        "--fill",
-        `${STARS[chosenCard.word_status + chosenCard.levelStreak]}%`,
-      );
-
-      console.log(chosenCard);
-    } else {
-      feedback.textContent = "טוווווווב!!! אתה יודע את כל המילים יא גאון שכמוך";
-      qText.textContent = "";
-      list.style.display = "none";
-      qLabel.style.display = "none";
-    }
+  // make sure questions cycle without repetition before full cycle
+  // check the highest appeared value and only allow questions with lower appered value show
+  //if all appered values are equal then choose random from all cards.
+  if (chosenCard) {
+    chosenCard.appeared += 1;
+    qText.textContent = chosenCard.question;
+    starsFill.classList.remove("animate");
+    levelText.textContent = HEBSTATUS[chosenCard.word_status];
+    difArrow.style.left = DIFFLEVELS[chosenCard.diff];
+    starsFill.style.setProperty(
+      "--fill",
+      `${STARS[chosenCard.word_status + chosenCard.levelStreak]}%`,
+    );
+  } else {
+    feedback.textContent = "טוווווווב!!! אתה יודע את כל המילים יא גאון שכמוך";
+    qText.textContent = "";
+    list.style.display = "none";
+    qLabel.style.display = "none";
   }
 }
 
 function pickQuestionAndAnswers() {
   chooseQuestion();
-  // uppdate 4 snaswers in a a list with radio buttons.
+  // uppdate 4 naswers in a a list with radio buttons.
   function showAnswers() {
     list.innerHTML = answers
       .map(
@@ -186,12 +183,11 @@ function pickQuestionAndAnswers() {
     const wrongAnswers = [];
     while (num > wrongAnswers.length) {
       const randomAns =
-        data.words[Math.floor(Math.random() * data.words.length)].he;
+        data.words[Math.floor(Math.random() * data.words.length)].en;
       if (!wrongAnswers.includes(randomAns) && randomAns !== correct.answer) {
         wrongAnswers.push(randomAns);
       }
     }
-    console.log(wrongAnswers);
     const AllAns = wrongAnswers;
     const rightAnsPosition = Math.trunc(Math.random() * num);
     AllAns[rightAnsPosition] = correct.answer;
@@ -218,7 +214,6 @@ function updateUI() {
   document.querySelectorAll(".submit").forEach((button) => {
     button.disabled = false;
   });
-  console.log(currentSession);
   feedbackBg.classList.remove("correct_bg");
   knowOrGuess.classList.add("hidden");
   submitMainBtn.classList.remove("hidden");
@@ -365,7 +360,6 @@ function handleFirstTryWrong(card, mode) {
 }
 
 function handleCorrectAnswer(card, mode) {
-  console.log("correct answer");
   feedback.textContent = "כל הכבוד! תשובה נכונה";
 
   if (firstTry) {
@@ -380,8 +374,6 @@ function handleCorrectAnswer(card, mode) {
   timer.textContent = "00:00";
   if (clock) clearInterval(clock);
 
-  console.log(card);
-
   setTimeout(() => {
     feedbackBg.classList.remove("correct_bg");
     updateUI();
@@ -389,8 +381,6 @@ function handleCorrectAnswer(card, mode) {
 }
 
 function handleWrongAnswer(card, selected) {
-  console.log("wrong answer");
-
   const label = selected.closest("li");
 
   feedbackBg.classList.add("wrong_bg");
@@ -432,11 +422,8 @@ function applyCooldown(isCorrect, mode, timeToAnswer) {
 
   // const MIN = 10 * 60 * 1000;
   // const MAX = 21 * 24 * 60 * 60 * 1000;
-  const MIN = 5000;
-  const MAX = 10000;
-
-  console.log("cooldown func");
-  console.log(isCorrect, mode);
+  const MIN = 1000;
+  const MAX = 100000;
 
   if (isCorrect && mode === "know") {
     cooldown *= 1.4 * speedMult;
@@ -452,8 +439,6 @@ function applyCooldown(isCorrect, mode, timeToAnswer) {
 
   chosenCard.coolDown = cooldown;
   chosenCard.cooldownUntil = Date.now() + cooldown;
-
-  console.log(cooldown);
 }
 
 document.querySelectorAll(".submit").forEach((button) => {
@@ -501,7 +486,6 @@ let clock;
 
 function startTimer() {
   startTime = performance.now();
-  console.log(startTime);
   let totalSeconds = 0;
   let seconds = 0;
   let minutes = 0;
