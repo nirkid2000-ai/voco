@@ -1,10 +1,11 @@
 "use strict";
-import data from "/dataset_c2.js";
+import data from "/dataset.js";
 
 const qText = document.querySelector(".q");
+const levelText = document.querySelector(".word_level");
+const difArrow = document.querySelector(".arrow");
 const qLabel = document.querySelector(".q_label");
 const list = document.querySelector(".wordlist");
-const nextBtn = document.querySelector(".next_btn");
 const submitMainBtn = document.querySelector(".main_ans");
 const knowOrGuess = document.querySelector(".knoworguess");
 const feedback = document.querySelector(".feedback");
@@ -13,14 +14,19 @@ const streakStat = document.querySelector(".streak_stat");
 const timer = document.querySelector(".time_stat");
 const totalFrom = document.querySelector(".total_from");
 const feedbackBg = document.querySelector(".feedbackbg");
+const starsFill = document.querySelector(".stars-fill");
 
-const cards = data.words.map((word, i) => ({
+const THIRTY_MINUTES = 30 * 60 * 1000;
+const THIRTY_SECONDS = 1000;
+
+const cards = data.words.slice(1, 10).map((word, i) => ({
   id: i + 1,
   question: word.en,
   answer: word.he,
+  diff: word.level,
   word_status: "new",
+  word_mastery: 0,
   appeared: 0,
-  skipped: 0,
   rightAnswers: 0,
   wordStreak: 0,
   levelStreak: 0,
@@ -28,12 +34,9 @@ const cards = data.words.map((word, i) => ({
   accuracy: 0,
   wrongTries: 0,
   recalls: [],
-  coolDown: null,
+  coolDown: THIRTY_SECONDS,
   onCooldown: false,
   cooldownUntil: null,
-  removed: false,
-  removedTime: 0,
-  removedStreak: 0,
   deleted: false,
 }));
 
@@ -45,37 +48,31 @@ const STATUS = {
   MASTERED: "mastered",
 };
 
-//days / hours / (mins) / seconds
-
-86400000 / 24 / 60;
-
-const COOLDOWNSUNITS = {
-  COOLDAYS: 86400000,
-  COOLHOURS: 86400000 / 24,
-  COOLMINUTES: 86400000 / 24 / 60,
+const HEBSTATUS = {
+  new: "מילה חדשה",
+  unknown: "מילה לא מוכרת",
+  recognized: "מילה שאתה מזהה",
+  known: "מילה שאתה מכיר",
+  mastered: "מילה שאתה שולט בה",
 };
 
-const COOLDOWNS = {
-  new: {
-    0: 0,
-  },
-  unknown: {
-    0: 10 * COOLDOWNSUNITS.COOLMINUTES,
-  },
-  recognized: {
-    0: 12 * COOLDOWNSUNITS.COOLHOURS,
-    1: 1 * COOLDOWNSUNITS.COOLDAYS,
-  },
-  known: {
-    0: 2 * COOLDOWNSUNITS.COOLDAYS,
-    1: 3 * COOLDOWNSUNITS.COOLDAYS,
-    2: 5 * COOLDOWNSUNITS.COOLDAYS,
-  },
-  mastered: {
-    0: 7 * COOLDOWNSUNITS.COOLDAYS,
-    1: 14 * COOLDOWNSUNITS.COOLDAYS,
-    2: 21 * COOLDOWNSUNITS.COOLDAYS,
-  },
+const STARS = {
+  new0: 0,
+  unknown0: 0,
+  recognized0: 20,
+  known0: 40,
+  known1: 60,
+  known2: 80,
+  mastered0: 100,
+};
+
+const DIFFLEVELS = {
+  A1: "10%",
+  A2: "30%",
+  B1: "50%",
+  B2: "60%",
+  C1: "70%",
+  C2: "90%",
 };
 
 let updatedCards;
@@ -86,12 +83,12 @@ let globalStreak = 0;
 let globalScore = 0;
 let correctGuesses = 0;
 let totalGuesses = 0;
-let coolDown = 2500;
 let totalCorrect = 0;
 let totalQs = 0;
 let currentSession = new Map();
 let startTime;
 let answerTime;
+let btnDisabled = false;
 
 function chooseQuestion() {
   let randomIndex;
@@ -111,8 +108,8 @@ function chooseQuestion() {
 
   if (updatedCards.length > 0) {
     console.log(updatedCards);
-
     const minAppeared = Math.min(...updatedCards.map((card) => card.appeared));
+
     console.log(minAppeared);
 
     const sortedQuestions = updatedCards.filter(
@@ -121,8 +118,17 @@ function chooseQuestion() {
     console.log(sortedQuestions);
     randomIndex = Math.floor(Math.random() * sortedQuestions.length);
     chosenCard = sortedQuestions[randomIndex];
-    qText.textContent = chosenCard.question;
     chosenCard.appeared += 1;
+    qText.textContent = chosenCard.question;
+    starsFill.classList.remove("animate");
+    levelText.textContent = HEBSTATUS[chosenCard.word_status];
+    difArrow.style.left = DIFFLEVELS[chosenCard.diff];
+    starsFill.style.setProperty(
+      "--fill",
+      `${STARS[chosenCard.word_status + chosenCard.levelStreak]}%`,
+    );
+    console.log(`${STARS[chosenCard.word_status + chosenCard.levelStreak]}%`);
+
     console.log(chosenCard);
     // set_word_status.call(chosenCard);
   } else {
@@ -150,6 +156,13 @@ function pickQuestionAndAnswers() {
     });
   }
 
+  const numberOfAns =
+    chosenCard.word_status === "known"
+      ? 5
+      : chosenCard.word_status === "mastered"
+        ? 6
+        : 4;
+
   list.addEventListener("change", (e) => {
     if (e.target.name === "answer") {
       if (firstTry) {
@@ -161,7 +174,7 @@ function pickQuestionAndAnswers() {
     }
   });
 
-  const answers = chooseAnswers(4, chosenCard);
+  const answers = chooseAnswers(numberOfAns, chosenCard);
 
   function chooseAnswers(num, correct) {
     const wrongAnswers = [];
@@ -182,6 +195,10 @@ function pickQuestionAndAnswers() {
 }
 
 function updateUI() {
+  btnDisabled = false;
+  document.querySelectorAll(".submit").forEach((button) => {
+    button.disabled = false;
+  });
   console.log(currentSession);
   feedbackBg.classList.remove("correct_bg");
   knowOrGuess.classList.add("hidden");
@@ -192,12 +209,6 @@ function updateUI() {
   feedback.textContent = "";
   pickQuestionAndAnswers();
   submitMainBtn.classList.add("inactive");
-}
-
-function skipQ(e) {
-  e.preventDefault();
-  chosenCard.skipped += 1;
-  updateUI();
 }
 
 function updateAccuracy(card) {
@@ -227,6 +238,9 @@ function promoteCard(card) {
     card.word_status = STATUS.MASTERED;
     card.levelStreak = 0;
   }
+  if (card.word_status === STATUS.MASTERED) {
+    card.levelStreak = 0;
+  }
 }
 
 function demoteCard(card) {
@@ -254,6 +268,15 @@ function demoteCard(card) {
   }
 }
 
+function updateWordStats(card) {
+  levelText.textContent = HEBSTATUS[card.word_status];
+  difArrow.style.left = DIFFLEVELS[card.diff];
+  starsFill.style.setProperty(
+    "--fill",
+    `${STARS[card.word_status + card.levelStreak]}%`,
+  );
+}
+
 function getTriesMessage(tries) {
   if (tries === 1) return "טעות ראשונה";
   if (tries === 2) return "טעות שנייה";
@@ -278,23 +301,6 @@ function applyCorrectScore() {
   if (globalStreak === 100) globalScore *= 3;
 }
 
-function markCardRemoved(card) {
-  // Choose ONE streak field and use it consistently.
-  // Here I assume wordStreak is the correct one.
-  if (card.wordStreak >= 1) {
-    card.removed = true;
-    card.removedTime = Date.now();
-    card.removedStreak += 1;
-  }
-}
-
-function resetCardRemoval(card) {
-  card.removed = false;
-  card.removedTime = null;
-  card.removedStreak = 0;
-  card.wordStreak = 0;
-}
-
 function handleFirstTryCorrect(card, mode) {
   if (mode === "know") {
     card.levelStreak += 1;
@@ -311,6 +317,7 @@ function handleFirstTryCorrect(card, mode) {
   totalCorrect += 1;
   totalQs += 1;
 
+  updateWordStats(card);
   updateAccuracy(card);
   currentSession.set(card.id, card);
 
@@ -347,13 +354,9 @@ function handleCorrectAnswer(card, mode) {
   }
 
   applyCorrectScore();
-  markCardRemoved(card);
 
   scoreStat.textContent = `${globalScore}`;
   feedbackBg.classList.add("correct_bg");
-
-  const duration = performance.now() - startTime;
-  card.recalls.push(Math.floor(duration));
 
   timer.textContent = "00:00";
   if (clock) clearInterval(clock);
@@ -379,8 +382,6 @@ function handleWrongAnswer(card, selected) {
   selected.disabled = true;
   selected.checked = false;
 
-  resetCardRemoval(card);
-
   globalStreak = 0;
   streakStat.textContent = `${globalStreak}`;
 
@@ -402,38 +403,87 @@ function handleWrongAnswer(card, selected) {
   }, 1000);
 }
 
+function applyCooldown(isCorrect, mode, timeToAnswer) {
+  chosenCard.onCooldown = true;
+
+  let cooldown = chosenCard.coolDown ?? 30 * 60 * 1000;
+
+  const speedMult =
+    timeToAnswer / 1000 < 2 ? 1.2 : timeToAnswer / 1000 < 4 ? 1.1 : 1;
+
+  // const MIN = 10 * 60 * 1000;
+  // const MAX = 21 * 24 * 60 * 60 * 1000;
+  const MIN = 5000;
+  const MAX = 10000;
+
+  console.log("cooldown func");
+  console.log(isCorrect, mode);
+
+  if (isCorrect && mode === "know") {
+    cooldown *= 1.4 * speedMult;
+  } else if (isCorrect && mode === "guess") {
+    cooldown *= 1;
+  } else if (!isCorrect && mode === "know") {
+    cooldown *= 0.6;
+  } else if (!isCorrect && (mode === "main" || mode === "guess")) {
+    cooldown *= 0.8;
+  }
+
+  cooldown = Math.max(MIN, Math.min(MAX, cooldown));
+
+  chosenCard.coolDown = cooldown;
+  chosenCard.cooldownUntil = Date.now() + cooldown;
+
+  console.log(cooldown);
+}
+
 document.querySelectorAll(".submit").forEach((button) => {
   button.addEventListener("click", (e) => {
     e.preventDefault();
+
+    if (btnDisabled) return;
+    btnDisabled = true;
+
     const mode = e.currentTarget.dataset.mode;
     console.log(mode);
+    starsFill.classList.add("animate");
 
     const selected = document.querySelector('input[name="answer"]:checked');
 
+    const correctAns = selected?.value === chosenCard.answer;
+
     if (!selected) {
+      btnDisabled = false;
       feedback.textContent = "לא נבחרה תשובה";
+      setTimeout(() => (feedback.textContent = ""), 1000);
       return;
     }
+
+    const duration = performance.now() - startTime;
+    chosenCard.recalls.push(Math.floor(duration));
 
     console.log("User chose:", selected.value);
     console.log("Correct answer:", chosenCard.answer);
 
-    if (selected.value === chosenCard.answer) {
+    button.disabled = true;
+
+    if (correctAns) {
       handleCorrectAnswer(chosenCard, mode);
     } else {
       handleWrongAnswer(chosenCard, selected, mode);
+
+      btnDisabled = false;
+      document.querySelectorAll(".submit").forEach((btn) => {
+        btn.disabled = false;
+        btn.style.pointerEvents = "";
+      });
     }
 
-    const coolDown =
-      COOLDOWNS[chosenCard.word_status]?.[chosenCard.levelStreak];
-    if (coolDown > 0) chosenCard.onCooldown = true;
-    chosenCard.coolDown = coolDown;
-    chosenCard.cooldownUntil = Date.now() + coolDown;
+    applyCooldown(correctAns, mode, duration);
+
     console.log(cards);
   });
 });
-
-nextBtn.addEventListener("click", skipQ);
 
 let clock;
 
