@@ -7,6 +7,7 @@ const difArrow = document.querySelector(".arrow");
 const qLabel = document.querySelector(".q_label");
 const list = document.querySelector(".wordlist");
 const submitMainBtn = document.querySelector(".main_ans");
+const resetbtn = document.querySelector(".reset");
 const knowOrGuess = document.querySelector(".knoworguess");
 const feedback = document.querySelector(".feedback");
 const scoreStat = document.querySelector(".score_stat");
@@ -19,27 +20,116 @@ const starsFill = document.querySelector(".stars-fill");
 const THIRTY_MINUTES = 30 * 60 * 1000;
 const THIRTY_SECONDS = 10 * 1000;
 
-const cards = data.words.slice(1, 10).map((word, i) => ({
-  id: i + 1,
-  question: word.he,
-  answer: word.en,
-  diff: word.level,
-  word_status: "new",
-  word_mastery: 0,
-  appeared: 0,
-  rightAnswers: 0,
-  wordStreak: 0,
-  levelStreak: 0,
-  wrongAnswers: 0,
-  accuracy: 0,
-  wrongTries: 0,
-  recalls: [],
-  coolDown: THIRTY_SECONDS,
-  onCooldown: false,
-  cooldownUntil: null,
-  sinceCooldown: null,
-  deleted: false,
-}));
+const STORAGE_KEY = "vocab-app-progress-v1";
+
+function createInitialCards() {
+  return data.words.slice(1, 10).map((word, i) => ({
+    id: i + 1,
+    question: word.he,
+    answer: word.en,
+    diff: word.level,
+    word_status: "new",
+    appeared: 0,
+    rightAnswers: 0,
+    wordStreak: 0,
+    levelStreak: 0,
+    wrongAnswers: 0,
+    accuracy: 0,
+    wrongTries: 0,
+    recalls: [],
+    coolDown: THIRTY_SECONDS,
+    onCooldown: false,
+    cooldownUntil: null,
+    sinceCooldown: null,
+  }));
+}
+
+let cards = createInitialCards();
+
+function saveProgress() {
+  const state = {
+    cards,
+    globalScore,
+    globalStreak,
+    correctGuesses,
+    totalGuesses,
+    totalCorrect,
+    totalQs,
+  };
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function loadProgress() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+
+    cards = createInitialCards();
+
+    if (!raw) return;
+
+    const state = JSON.parse(raw);
+    if (!state) return;
+
+    if (Array.isArray(state.cards)) {
+      const savedCardsById = new Map(
+        state.cards.map((card) => [card.id, card]),
+      );
+
+      cards = cards.map((card) => {
+        const saved = savedCardsById.get(card.id);
+        return saved ? { ...card, ...saved } : card;
+      });
+    }
+
+    globalScore = state.globalScore ?? 0;
+    globalStreak = state.globalStreak ?? 0;
+    correctGuesses = state.correctGuesses ?? 0;
+    totalGuesses = state.totalGuesses ?? 0;
+    totalCorrect = state.totalCorrect ?? 0;
+    totalQs = state.totalQs ?? 0;
+  } catch (err) {
+    console.error("Failed to load progress:", err);
+    cards = createInitialCards();
+  }
+}
+
+function resetProgress() {
+  console.log("reset");
+  localStorage.removeItem(STORAGE_KEY);
+
+  cards = data.words.slice(1, 10).map((word, i) => ({
+    id: i + 1,
+    question: word.he,
+    answer: word.en,
+    diff: word.level,
+    word_status: "new",
+    appeared: 0,
+    rightAnswers: 0,
+    wordStreak: 0,
+    levelStreak: 0,
+    wrongAnswers: 0,
+    accuracy: 0,
+    wrongTries: 0,
+    recalls: [],
+    coolDown: THIRTY_SECONDS,
+    onCooldown: false,
+    cooldownUntil: null,
+    sinceCooldown: null,
+  }));
+
+  globalScore = 0;
+  globalStreak = 0;
+  correctGuesses = 0;
+  totalGuesses = 0;
+  totalCorrect = 0;
+  totalQs = 0;
+  updateUI();
+  timer.textContent = "00:00";
+  scoreStat.textContent = `${globalScore}`;
+  streakStat.textContent = `${globalStreak}`;
+  totalFrom.textContent = `  ${totalCorrect} מתוך ${totalQs} (ניחושים ${correctGuesses})`;
+}
 
 const STATUS = {
   NEW: "new",
@@ -101,7 +191,7 @@ function chooseQuestion() {
 
   for (const card of cards) {
     if (!card.onCooldown) continue;
-    if (now >= card.cooldownUntil) {
+    if (card.onCooldown && card.cooldownUntil && now >= card.cooldownUntil) {
       card.sinceCooldown = now - card.cooldownUntil;
       fromCooldowns.push(card);
     }
@@ -219,6 +309,8 @@ function updateUI() {
   submitMainBtn.classList.remove("hidden");
   currentTries = 0;
   firstTry = true;
+  renderTimer();
+
   feedback.textContent = "";
   pickQuestionAndAnswers();
   submitMainBtn.classList.add("inactive");
@@ -335,8 +427,9 @@ function handleFirstTryCorrect(card, mode) {
   updateAccuracy(card);
   currentSession.set(card.id, card);
 
-  totalFrom.textContent = `  ${totalCorrect} מתוך ${totalQs} (ניחושים ${correctGuesses})`;
-  streakStat.textContent = `${globalStreak}`;
+  renderStats();
+
+  saveProgress();
 }
 
 function handleFirstTryWrong(card, mode) {
@@ -353,10 +446,12 @@ function handleFirstTryWrong(card, mode) {
 
   updateAccuracy(card);
   demoteCard(card);
+  updateWordStats(card);
   currentSession.set(card.id, card);
 
-  totalFrom.textContent = `  ${totalCorrect} מתוך ${totalQs} (ניחושים ${correctGuesses})`;
-  streakStat.textContent = `${globalStreak}`;
+  renderStats();
+
+  saveProgress();
 }
 
 function handleCorrectAnswer(card, mode) {
@@ -368,10 +463,10 @@ function handleCorrectAnswer(card, mode) {
 
   applyCorrectScore();
 
-  scoreStat.textContent = `${globalScore}`;
+  renderStats();
   feedbackBg.classList.add("correct_bg");
 
-  timer.textContent = "00:00";
+  renderTimer();
   if (clock) clearInterval(clock);
 
   setTimeout(() => {
@@ -392,14 +487,14 @@ function handleWrongAnswer(card, selected) {
   selected.checked = false;
 
   globalStreak = 0;
-  streakStat.textContent = `${globalStreak}`;
+  renderStats();
 
-  currentTries += 1;
-
+  console.log(currentTries);
   if (firstTry) {
     handleFirstTryWrong(card);
   } else {
     card.wrongTries += 1;
+    saveProgress();
   }
   knowOrGuess.classList.add("hidden");
   submitMainBtn.classList.remove("hidden");
@@ -412,7 +507,8 @@ function handleWrongAnswer(card, selected) {
   }, 1000);
 }
 
-function applyCooldown(isCorrect, mode, timeToAnswer) {
+function applyCooldown(isCorrect, mode, timeToAnswer, tries) {
+  console.log("cooldown:");
   chosenCard.onCooldown = true;
 
   let cooldown = chosenCard.coolDown ?? 30 * 60 * 1000;
@@ -424,21 +520,24 @@ function applyCooldown(isCorrect, mode, timeToAnswer) {
   // const MAX = 21 * 24 * 60 * 60 * 1000;
   const MIN = 1000;
   const MAX = 100000;
-
   if (isCorrect && mode === "know") {
     cooldown *= 1.4 * speedMult;
   } else if (isCorrect && mode === "guess") {
     cooldown *= 1;
+  } else if (!isCorrect && mode === "guess") {
+    cooldown *= 0.8;
   } else if (!isCorrect && mode === "know") {
     cooldown *= 0.6;
-  } else if (!isCorrect && (mode === "main" || mode === "guess")) {
-    cooldown *= 0.8;
+  } else if (!isCorrect && mode === "main" && tries > 2) {
+    cooldown *= 0.9;
   }
 
   cooldown = Math.max(MIN, Math.min(MAX, cooldown));
-
+  const cooldownInSec = cooldown / 1000;
+  console.log(cooldownInSec);
   chosenCard.coolDown = cooldown;
   chosenCard.cooldownUntil = Date.now() + cooldown;
+  saveProgress();
 }
 
 document.querySelectorAll(".submit").forEach((button) => {
@@ -449,7 +548,6 @@ function onSubmit(e) {
   e.preventDefault();
 
   const button = e.currentTarget;
-
   if (btnDisabled) return;
   btnDisabled = true;
 
@@ -467,7 +565,9 @@ function onSubmit(e) {
   const correctAns = selected.value === chosenCard.answer;
   const duration = performance.now() - startTime;
 
-  button.disabled = true;
+  currentTries++;
+  // button.disabled = true;
+  applyCooldown(correctAns, mode, duration, currentTries);
 
   if (correctAns) {
     handleCorrectAnswer(chosenCard, mode);
@@ -479,8 +579,6 @@ function onSubmit(e) {
       btn.disabled = false;
     });
   }
-
-  applyCooldown(correctAns, mode, duration);
 }
 let clock;
 
@@ -498,4 +596,19 @@ function startTimer() {
   clock = setInterval(tick, 1000);
 }
 
+function renderStats() {
+  scoreStat.textContent = `${globalScore}`;
+  streakStat.textContent = `${globalStreak}`;
+  totalFrom.textContent = `${totalCorrect} מתוך ${totalQs} (ניחושים ${correctGuesses})`;
+}
+
+function renderTimer(time = "00:00") {
+  timer.textContent = time;
+}
+
+resetbtn.addEventListener("click", resetProgress);
+
+loadProgress();
 updateUI();
+renderTimer();
+renderStats();
