@@ -16,18 +16,40 @@ const timer = document.querySelector(".time_stat");
 const totalFrom = document.querySelector(".total_from");
 const feedbackBg = document.querySelector(".feedbackbg");
 const starsFill = document.querySelector(".stars-fill");
+const countdown = document.querySelector(".countdown");
+const countdownCon = document.querySelector(".countdown_con");
 
 const THIRTY_MINUTES = 30 * 60 * 1000;
 const THIRTY_SECONDS = 10 * 1000;
 
 const STORAGE_KEY = "vocab-app-progress-v1";
 
-function createInitialCards() {
-  return data.words.slice(1, 10).map((word, i) => ({
-    id: i + 1,
-    question: word.he,
-    answer: word.en,
-    diff: word.level,
+let countdownInterval;
+let countdownTime = 5;
+let timeOut = false;
+
+function startCountDown() {
+  let width = 100;
+  countdownCon.style.display = "block";
+
+  if (countdownInterval) {
+    clearInterval(countdownInterval);
+  }
+
+  countdownInterval = setInterval(() => {
+    width -= 0.25;
+    countdown.style.width = `${width}%`;
+
+    if (width <= 0) {
+      clearInterval(countdownInterval);
+      timeOut = true;
+    }
+  }, countdownTime * 2.5);
+}
+startCountDown();
+
+function createDefaultProgress() {
+  return {
     word_status: "new",
     appeared: 0,
     rightAnswers: 0,
@@ -41,14 +63,43 @@ function createInitialCards() {
     onCooldown: false,
     cooldownUntil: null,
     sinceCooldown: null,
+  };
+}
+
+function createInitialCards() {
+  return data.words.slice(1, 2).map((word, i) => ({
+    id: i + 1,
+    question: word.he,
+    answer: word.en,
+    diff: word.level,
+    ...createDefaultProgress(),
   }));
 }
 
-let cards = createInitialCards();
-
 function saveProgress() {
+  const cardsProgress = Object.fromEntries(
+    cards.map((card) => [
+      card.id,
+      {
+        word_status: card.word_status,
+        appeared: card.appeared,
+        rightAnswers: card.rightAnswers,
+        wordStreak: card.wordStreak,
+        levelStreak: card.levelStreak,
+        wrongAnswers: card.wrongAnswers,
+        accuracy: card.accuracy,
+        wrongTries: card.wrongTries,
+        recalls: card.recalls,
+        coolDown: card.coolDown,
+        onCooldown: card.onCooldown,
+        cooldownUntil: card.cooldownUntil,
+        sinceCooldown: card.sinceCooldown,
+      },
+    ]),
+  );
+
   const state = {
-    cards,
+    cardsProgress,
     globalScore,
     globalStreak,
     correctGuesses,
@@ -57,7 +108,11 @@ function saveProgress() {
     totalQs,
   };
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (err) {
+    console.error("Failed to save progress:", err);
+  }
 }
 
 function loadProgress() {
@@ -71,14 +126,10 @@ function loadProgress() {
     const state = JSON.parse(raw);
     if (!state) return;
 
-    if (Array.isArray(state.cards)) {
-      const savedCardsById = new Map(
-        state.cards.map((card) => [card.id, card]),
-      );
-
+    if (state.cardsProgress) {
       cards = cards.map((card) => {
-        const saved = savedCardsById.get(card.id);
-        return saved ? { ...card, ...saved } : card;
+        const savedProgress = state.cardsProgress[card.id];
+        return savedProgress ? { ...card, ...savedProgress } : card;
       });
     }
 
@@ -125,17 +176,20 @@ function resetProgress() {
   totalCorrect = 0;
   totalQs = 0;
   updateUI();
-  timer.textContent = "00:00";
-  scoreStat.textContent = `${globalScore}`;
-  streakStat.textContent = `${globalStreak}`;
-  totalFrom.textContent = `  ${totalCorrect} מתוך ${totalQs} (ניחושים ${correctGuesses})`;
+  list.style.display = "flex";
+  renderStats();
+  renderTimer();
 }
+
+let cards = createInitialCards();
 
 const STATUS = {
   NEW: "new",
   UNKNOWN: "unknown",
   RECOGNIZED: "recognized",
   KNOWN: "known",
+  KNOWWELL: "knownWell",
+  STRONG: "strong",
   MASTERED: "mastered",
 };
 
@@ -144,17 +198,24 @@ const HEBSTATUS = {
   unknown: "מילה לא מוכרת",
   recognized: "מילה שאתה מזהה",
   known: "מילה שאתה מכיר",
+  knownWell: "מילה שאתה מכיר היטב",
+  strong: "מילה שאתה יודע בביטחון ",
   mastered: "מילה שאתה שולט בה",
 };
 
 const STARS = {
   new0: 0,
   unknown0: 0,
-  recognized0: 20,
-  known0: 40,
-  known1: 60,
-  known2: 80,
-  mastered0: 100,
+  recognized0: 9.5,
+  recognized1: 20,
+  known0: 30,
+  known1: 40,
+  knownWell0: 50,
+  knownWell1: 60,
+  strong0: 70,
+  strong1: 80,
+  mastered0: 90,
+  mastered1: 100,
 };
 
 const DIFFLEVELS = {
@@ -179,6 +240,7 @@ let currentSession = new Map();
 let startTime;
 let answerTime;
 let btnDisabled = false;
+let flipQuestion = false;
 
 function chooseQuestion() {
   console.log(cards);
@@ -221,13 +283,24 @@ function chooseQuestion() {
       console.log("not from cooldown", chosenCard);
     }
   }
+  if (!chosenCard) {
+    chosenCard = cards.reduce((longest, card) =>
+      card.cooldownUntil < longest.cooldownUntil ? card : longest,
+    );
+    console.log(chosenCard, "from during cooldowns");
+  }
 
   // make sure questions cycle without repetition before full cycle
   // check the highest appeared value and only allow questions with lower appered value show
   //if all appered values are equal then choose random from all cards.
   if (chosenCard) {
+    if (
+      chosenCard.word_status === "strong" ||
+      chosenCard.word_status === "mastered"
+    )
+      flipQuestion = true;
     chosenCard.appeared += 1;
-    qText.textContent = chosenCard.question;
+    qText.textContent = flipQuestion ? chosenCard.answer : chosenCard.question;
     starsFill.classList.remove("animate");
     levelText.textContent = HEBSTATUS[chosenCard.word_status];
     difArrow.style.left = DIFFLEVELS[chosenCard.diff];
@@ -235,21 +308,22 @@ function chooseQuestion() {
       "--fill",
       `${STARS[chosenCard.word_status + chosenCard.levelStreak]}%`,
     );
-  } else {
-    feedback.textContent = "טוווווווב!!! אתה יודע את כל המילים יא גאון שכמוך";
-    qText.textContent = "";
-    list.style.display = "none";
-    qLabel.style.display = "none";
+    // } else {
+    // feedback.textContent = "טוווווווב!!! אתה יודע את כל המילים יא גאון שכמוך";
+    // qText.textContent = "";
+    // list.style.display = "none";
+    // qLabel.style.display = "none";
   }
 }
 
 function pickQuestionAndAnswers() {
   chooseQuestion();
   // uppdate 4 naswers in a a list with radio buttons.
-  function showAnswers() {
-    list.innerHTML = answers
-      .map(
-        (answer) => `
+  if (chosenCard) {
+    function showAnswers() {
+      list.innerHTML = answers
+        .map(
+          (answer) => `
         <li>
           <label class="answer_label">
             <input type="radio" name="answer" value="${answer}">
@@ -257,33 +331,47 @@ function pickQuestionAndAnswers() {
           </label>
         </li>
       `,
-      )
-      .join("");
-  }
-
-  const numberOfAns =
-    chosenCard.word_status === "known"
-      ? 5
-      : chosenCard.word_status === "mastered"
-        ? 6
-        : 4;
-  const answers = chooseAnswers(numberOfAns, chosenCard);
-
-  function chooseAnswers(num, correct) {
-    const wrongAnswers = [];
-    while (num > wrongAnswers.length) {
-      const randomAns =
-        data.words[Math.floor(Math.random() * data.words.length)].en;
-      if (!wrongAnswers.includes(randomAns) && randomAns !== correct.answer) {
-        wrongAnswers.push(randomAns);
-      }
+        )
+        .join("");
     }
-    const AllAns = wrongAnswers;
-    const rightAnsPosition = Math.trunc(Math.random() * num);
-    AllAns[rightAnsPosition] = correct.answer;
-    return AllAns;
+
+    const status = chosenCard.word_status;
+
+    const numberOfAns =
+      status === "mastered"
+        ? 6
+        : status === "knownwell" || status === "strong"
+          ? 5
+          : 4;
+
+    const answerKey = flipQuestion ? "he" : "en";
+    const correctAnswer = flipQuestion
+      ? chosenCard.question
+      : chosenCard.answer;
+
+    const answers = chooseAnswers(numberOfAns, correctAnswer);
+
+    function chooseAnswers(num, correctAnswer) {
+      const wrongAnswers = [];
+
+      while (num > wrongAnswers.length) {
+        const word = data.words[Math.floor(Math.random() * data.words.length)];
+        const randomAns = word[answerKey];
+
+        if (!wrongAnswers.includes(randomAns) && randomAns !== correctAnswer) {
+          wrongAnswers.push(randomAns);
+        }
+      }
+
+      const allAns = wrongAnswers;
+      const rightAnsPosition = Math.trunc(Math.random() * num);
+      allAns[rightAnsPosition] = correctAnswer;
+
+      return allAns;
+    }
+
+    showAnswers();
   }
-  showAnswers();
 }
 
 list.addEventListener("change", (e) => {
@@ -299,7 +387,6 @@ list.addEventListener("change", (e) => {
 
 function updateUI() {
   if (clock) clearInterval(clock);
-
   btnDisabled = false;
   document.querySelectorAll(".submit").forEach((button) => {
     button.disabled = false;
@@ -334,18 +421,28 @@ function promoteCard(card) {
     return;
   }
 
-  if (card.word_status === STATUS.RECOGNIZED && card.levelStreak >= 1) {
+  if (card.word_status === STATUS.RECOGNIZED && card.levelStreak >= 2) {
     card.word_status = STATUS.KNOWN;
     card.levelStreak = 0;
     return;
   }
 
-  if (card.word_status === STATUS.KNOWN && card.levelStreak >= 3) {
+  if (card.word_status === STATUS.KNOWN && card.levelStreak >= 2) {
+    card.word_status = STATUS.KNOWWELL;
+    card.levelStreak = 0;
+  }
+
+  if (card.word_status === STATUS.KNOWWELL && card.levelStreak >= 2) {
+    card.word_status = STATUS.STRONG;
+    card.levelStreak = 0;
+  }
+
+  if (card.word_status === STATUS.STRONG && card.levelStreak >= 2) {
     card.word_status = STATUS.MASTERED;
     card.levelStreak = 0;
   }
   if (card.word_status === STATUS.MASTERED) {
-    card.levelStreak = 0;
+    if (card.levelStreak >= 2) card.levelStreak = 1;
   }
 }
 
@@ -358,19 +455,29 @@ function demoteCard(card) {
 
   if (card.word_status === STATUS.RECOGNIZED) {
     card.word_status = STATUS.UNKNOWN;
-    card.levelStreak = 0;
+    card.levelStreak = 1;
     return;
   }
 
   if (card.word_status === STATUS.KNOWN) {
     card.word_status = STATUS.RECOGNIZED;
-    card.levelStreak = 0;
+    card.levelStreak = 1;
+    return;
+  }
+  if (card.word_status === STATUS.KNOWWELL) {
+    card.word_status = STATUS.KNOWN;
+    card.levelStreak = 1;
+    return;
+  }
+  if (card.word_status === STATUS.STRONG) {
+    card.word_status = STATUS.KNOWWELL;
+    card.levelStreak = 1;
     return;
   }
 
   if (card.word_status === STATUS.MASTERED) {
-    card.word_status = STATUS.KNOWN;
-    card.levelStreak = 0;
+    card.word_status = STATUS.STRONG;
+    card.levelStreak = 1;
   }
 }
 
@@ -422,7 +529,8 @@ function handleFirstTryCorrect(card, mode) {
   globalStreak += 1;
   totalCorrect += 1;
   totalQs += 1;
-
+  const duration = performance.now() - startTime;
+  chosenCard.recalls.push(Math.floor(duration));
   updateWordStats(card);
   updateAccuracy(card);
   currentSession.set(card.id, card);
@@ -433,7 +541,7 @@ function handleFirstTryCorrect(card, mode) {
 }
 
 function handleFirstTryWrong(card, mode) {
-  if (mode === "know") {
+  if (mode === "guess") {
     totalGuesses += 1;
   }
   firstTry = false;
@@ -487,6 +595,7 @@ function handleWrongAnswer(card, selected) {
   selected.checked = false;
 
   globalStreak = 0;
+  card.wordStreak = 0;
   renderStats();
 
   console.log(currentTries);
@@ -561,8 +670,8 @@ function onSubmit(e) {
     setTimeout(() => (feedback.textContent = ""), 1000);
     return;
   }
-
-  const correctAns = selected.value === chosenCard.answer;
+  const key = flipQuestion ? "question" : "answer";
+  const correctAns = selected.value === chosenCard[key];
   const duration = performance.now() - startTime;
 
   currentTries++;
