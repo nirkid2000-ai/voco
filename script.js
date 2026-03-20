@@ -24,30 +24,6 @@ const THIRTY_SECONDS = 10 * 1000;
 
 const STORAGE_KEY = "vocab-app-progress-v1";
 
-let countdownInterval;
-let countdownTime = 5;
-let timeOut = false;
-
-function startCountDown() {
-  let width = 100;
-  countdownCon.style.display = "block";
-
-  if (countdownInterval) {
-    clearInterval(countdownInterval);
-  }
-
-  countdownInterval = setInterval(() => {
-    width -= 0.25;
-    countdown.style.width = `${width}%`;
-
-    if (width <= 0) {
-      clearInterval(countdownInterval);
-      timeOut = true;
-    }
-  }, countdownTime * 2.5);
-}
-startCountDown();
-
 function createDefaultProgress() {
   return {
     word_status: "new",
@@ -63,11 +39,12 @@ function createDefaultProgress() {
     onCooldown: false,
     cooldownUntil: null,
     sinceCooldown: null,
+    isCountdown: false,
   };
 }
 
 function createInitialCards() {
-  return data.words.slice(1, 2).map((word, i) => ({
+  return data.words.slice(10, 13).map((word, i) => ({
     id: i + 1,
     question: word.he,
     answer: word.en,
@@ -94,6 +71,7 @@ function saveProgress() {
         onCooldown: card.onCooldown,
         cooldownUntil: card.cooldownUntil,
         sinceCooldown: card.sinceCooldown,
+        isCountdown: card.isCountdown,
       },
     ]),
   );
@@ -218,13 +196,28 @@ const STARS = {
   mastered1: 100,
 };
 
+const COUNTDOWNTIMES = {
+  new0: 30,
+  unknown0: 30,
+  recognized0: 30,
+  recognized1: 30,
+  known0: 25,
+  known1: 20,
+  knownWell0: 20,
+  knownWell1: 15,
+  strong0: 10,
+  strong1: 5,
+  mastered0: 3,
+  mastered1: 3,
+};
+
 const DIFFLEVELS = {
-  A1: "10%",
-  A2: "30%",
-  B1: "50%",
-  B2: "60%",
+  A1: "0%",
+  A2: "20%",
+  B1: "30%",
+  B2: "50%",
   C1: "70%",
-  C2: "90%",
+  C2: "85%",
 };
 
 let chosenCard;
@@ -238,15 +231,16 @@ let totalCorrect = 0;
 let totalQs = 0;
 let currentSession = new Map();
 let startTime;
-let answerTime;
 let btnDisabled = false;
 let flipQuestion = false;
+let countdownInterval;
+let timeOut = false;
+let submitted = false;
 
 function chooseQuestion() {
   console.log(cards);
   let randomIndex;
   let fromCooldowns = [];
-
   let noCooldownsCards = [];
   chosenCard = null;
   const now = Date.now();
@@ -340,7 +334,7 @@ function pickQuestionAndAnswers() {
     const numberOfAns =
       status === "mastered"
         ? 6
-        : status === "knownwell" || status === "strong"
+        : status === "knownWell" || status === "strong"
           ? 5
           : 4;
 
@@ -387,7 +381,11 @@ list.addEventListener("change", (e) => {
 
 function updateUI() {
   if (clock) clearInterval(clock);
+  flipQuestion = false;
   btnDisabled = false;
+  timeOut = false;
+  submitted = false;
+  countdownCon.style.display = "none";
   document.querySelectorAll(".submit").forEach((button) => {
     button.disabled = false;
   });
@@ -400,6 +398,8 @@ function updateUI() {
 
   feedback.textContent = "";
   pickQuestionAndAnswers();
+  if (chosenCard.isCountdown) startCountDown();
+
   submitMainBtn.classList.add("inactive");
   startTimer();
 }
@@ -430,19 +430,25 @@ function promoteCard(card) {
   if (card.word_status === STATUS.KNOWN && card.levelStreak >= 2) {
     card.word_status = STATUS.KNOWWELL;
     card.levelStreak = 0;
+    card.isCountdown = true;
   }
 
   if (card.word_status === STATUS.KNOWWELL && card.levelStreak >= 2) {
     card.word_status = STATUS.STRONG;
     card.levelStreak = 0;
+    card.isCountdown = true;
   }
 
   if (card.word_status === STATUS.STRONG && card.levelStreak >= 2) {
     card.word_status = STATUS.MASTERED;
     card.levelStreak = 0;
+    card.isCountdown = true;
   }
   if (card.word_status === STATUS.MASTERED) {
-    if (card.levelStreak >= 2) card.levelStreak = 1;
+    if (card.levelStreak >= 2) {
+      card.levelStreak = 1;
+      card.isCountdown = true;
+    }
   }
 }
 
@@ -450,23 +456,31 @@ function demoteCard(card) {
   if (card.word_status === STATUS.NEW) {
     card.word_status = STATUS.UNKNOWN;
     card.levelStreak = 0;
+    card.isCountdown = false;
+
     return;
   }
 
   if (card.word_status === STATUS.RECOGNIZED) {
     card.word_status = STATUS.UNKNOWN;
     card.levelStreak = 1;
+    card.isCountdown = false;
+
     return;
   }
 
   if (card.word_status === STATUS.KNOWN) {
     card.word_status = STATUS.RECOGNIZED;
     card.levelStreak = 1;
+    card.isCountdown = false;
+
     return;
   }
   if (card.word_status === STATUS.KNOWWELL) {
     card.word_status = STATUS.KNOWN;
     card.levelStreak = 1;
+    card.isCountdown = false;
+
     return;
   }
   if (card.word_status === STATUS.STRONG) {
@@ -515,7 +529,11 @@ function applyCorrectScore() {
 }
 
 function handleFirstTryCorrect(card, mode) {
-  if (mode === "know") {
+  if ((card.word_status === "mastered") & timeOut) {
+    card.levelStreak = 0;
+  }
+
+  if (mode === "know" && !timeOut) {
     card.levelStreak += 1;
     promoteCard(card);
   } else {
@@ -548,6 +566,10 @@ function handleFirstTryWrong(card, mode) {
   card.wrongAnswers += 1;
   card.levelStreak = 0;
   card.wrongTries += 1;
+  console.log("clear count");
+  clearInterval(countdownInterval);
+  countdown.style.width = `0%`;
+  // countdownCon.style.display = "none";
 
   globalStreak = 0;
   totalQs += 1;
@@ -673,7 +695,7 @@ function onSubmit(e) {
   const key = flipQuestion ? "question" : "answer";
   const correctAns = selected.value === chosenCard[key];
   const duration = performance.now() - startTime;
-
+  submitted = true;
   currentTries++;
   // button.disabled = true;
   applyCooldown(correctAns, mode, duration, currentTries);
@@ -713,6 +735,29 @@ function renderStats() {
 
 function renderTimer(time = "00:00") {
   timer.textContent = time;
+}
+
+function startCountDown() {
+  console.log();
+  let width = 100;
+  countdownCon.style.display = "block";
+
+  if (countdownInterval) {
+    clearInterval(countdownInterval);
+  }
+
+  countdownInterval = setInterval(
+    () => {
+      width -= 0.25;
+      countdown.style.width = `${width}%`;
+
+      if (width <= 0 || submitted) {
+        clearInterval(countdownInterval);
+        timeOut = true;
+      }
+    },
+    `${COUNTDOWNTIMES[chosenCard.word_status + chosenCard.levelStreak]}` * 2.5,
+  );
 }
 
 resetbtn.addEventListener("click", resetProgress);

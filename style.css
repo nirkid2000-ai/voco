@@ -13,7 +13,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 18px;
 }
 
 .questions {
@@ -23,7 +23,7 @@
 }
 
 .word_level {
-  font-size: 14px;
+  font-size: 16px;
 
   align-self: flex-start;
   font-weight: bold;
@@ -32,7 +32,7 @@
 
 .q_stat {
   width: 100%;
-  font-size: 13px;
+  font-size: 16px;
   align-self: flex-start;
   display: flex;
   /* align-items: center; */
@@ -44,8 +44,8 @@
 .bar {
   position: relative;
   margin-top: 5px;
-  width: 90px;
-  height: 11px;
+  width: 100px;
+  height: 12px;
   background: linear-gradient(
     to right,
     #2ecc71 10%,
@@ -65,7 +65,7 @@
 }
 
 .star-meter {
-  width: 80px;
+  width: 90px;
 }
 
 .stars {
@@ -99,7 +99,8 @@
 }
 
 .feedbackbg {
-  width: 250px;
+  margin-top: 70px;
+  width: 300px;
   border-radius: 10px;
   padding: 0px 20px;
   padding-top: 10px;
@@ -227,4 +228,30 @@ input[type="radio"] {
 
 .hidden {
   display: none;
+}
+
+.countdown {
+  position: absolute;
+  z-index: 2;
+  background-color: rgb(255, 221, 0);
+  border-radius: 5px;
+  height: 20px;
+  width: 100%;
+}
+
+.countdown_bg {
+  position: absolute;
+  z-index: 1;
+  background-color: rgb(170, 170, 170);
+  border-radius: 5px;
+  height: 20px;
+  width: 100%;
+}
+
+.countdown_con {
+  display: none;
+  position: relative;
+  border-radius: 5px;
+  height: 20px;
+  width: 100%;
 }
