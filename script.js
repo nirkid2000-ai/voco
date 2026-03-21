@@ -18,6 +18,7 @@ const feedbackBg = document.querySelector(".feedbackbg");
 const starsFill = document.querySelector(".stars-fill");
 const countdown = document.querySelector(".countdown");
 const countdownCon = document.querySelector(".countdown_con");
+const submitButtons = document.querySelectorAll(".submit");
 
 const THIRTY_MINUTES = 30 * 60 * 1000;
 const THIRTY_SECONDS = 10 * 1000;
@@ -44,7 +45,7 @@ function createDefaultProgress() {
 }
 
 function createInitialCards() {
-  return data.words.slice(10, 13).map((word, i) => ({
+  return data.words.map((word, i) => ({
     id: i + 1,
     question: word.he,
     answer: word.en,
@@ -127,7 +128,7 @@ function resetProgress() {
   console.log("reset");
   localStorage.removeItem(STORAGE_KEY);
 
-  cards = data.words.slice(1, 10).map((word, i) => ({
+  cards = data.words.map((word, i) => ({
     id: i + 1,
     question: word.he,
     answer: word.en,
@@ -153,7 +154,7 @@ function resetProgress() {
   totalGuesses = 0;
   totalCorrect = 0;
   totalQs = 0;
-  updateUI();
+  resetState();
   list.style.display = "flex";
   renderStats();
   renderTimer();
@@ -236,6 +237,7 @@ let flipQuestion = false;
 let countdownInterval;
 let timeOut = false;
 let submitted = false;
+let clock;
 
 function chooseQuestion() {
   console.log(cards);
@@ -338,7 +340,7 @@ function pickQuestionAndAnswers() {
           ? 5
           : 4;
 
-    const answerKey = flipQuestion ? "he" : "en";
+    // const answerKey = flipQuestion ? "he" : "en";
     const correctAnswer = flipQuestion
       ? chosenCard.question
       : chosenCard.answer;
@@ -346,22 +348,63 @@ function pickQuestionAndAnswers() {
     const answers = chooseAnswers(numberOfAns, correctAnswer);
 
     function chooseAnswers(num, correctAnswer) {
+      const answerKey = flipQuestion ? "he" : "en";
+
+      const maxLenDiff =
+        chosenCard.word_status === "new" || chosenCard.word_status === "unknown"
+          ? 4
+          : chosenCard.word_status === "recognized" ||
+              chosenCard.word_status === "known"
+            ? 3
+            : 2;
+
+      const strictPool = data.words.filter((word) => {
+        const candidate = word[answerKey];
+        if (candidate === correctAnswer) return false;
+        if (word.level !== chosenCard.diff) return false;
+        return Math.abs(candidate.length - correctAnswer.length) <= maxLenDiff;
+      });
+
+      const sameLevelPool = data.words.filter((word) => {
+        const candidate = word[answerKey];
+        return candidate !== correctAnswer && word.level === chosenCard.diff;
+      });
+
+      const broadPool = data.words.filter((word) => {
+        return word[answerKey] !== correctAnswer;
+      });
+
       const wrongAnswers = [];
+      const used = new Set();
 
-      while (num > wrongAnswers.length) {
-        const word = data.words[Math.floor(Math.random() * data.words.length)];
-        const randomAns = word[answerKey];
+      function fillFromPool(pool) {
+        const shuffled = [...pool].sort(() => Math.random() - 0.5);
 
-        if (!wrongAnswers.includes(randomAns) && randomAns !== correctAnswer) {
-          wrongAnswers.push(randomAns);
+        for (const word of shuffled) {
+          const candidate = word[answerKey];
+          if (wrongAnswers.length >= num - 1) break;
+          if (used.has(candidate)) continue;
+
+          used.add(candidate);
+          wrongAnswers.push(candidate);
         }
       }
 
-      const allAns = wrongAnswers;
-      const rightAnsPosition = Math.trunc(Math.random() * num);
-      allAns[rightAnsPosition] = correctAnswer;
+      fillFromPool(strictPool);
+      if (wrongAnswers.length < num - 1) fillFromPool(sameLevelPool);
+      if (wrongAnswers.length < num - 1) fillFromPool(broadPool);
 
-      return allAns;
+      if (wrongAnswers.length < num - 1) {
+        throw new Error(
+          `Not enough unique answers to build ${num} options for "${correctAnswer}"`,
+        );
+      }
+
+      const allAnswers = [...wrongAnswers];
+      const rightAnsPosition = Math.floor(Math.random() * num);
+      allAnswers.splice(rightAnsPosition, 0, correctAnswer);
+
+      return allAnswers;
     }
 
     showAnswers();
@@ -378,31 +421,6 @@ list.addEventListener("change", (e) => {
     }
   }
 });
-
-function updateUI() {
-  if (clock) clearInterval(clock);
-  flipQuestion = false;
-  btnDisabled = false;
-  timeOut = false;
-  submitted = false;
-  countdownCon.style.display = "none";
-  document.querySelectorAll(".submit").forEach((button) => {
-    button.disabled = false;
-  });
-  feedbackBg.classList.remove("correct_bg");
-  knowOrGuess.classList.add("hidden");
-  submitMainBtn.classList.remove("hidden");
-  currentTries = 0;
-  firstTry = true;
-  renderTimer();
-
-  feedback.textContent = "";
-  pickQuestionAndAnswers();
-  if (chosenCard.isCountdown) startCountDown();
-
-  submitMainBtn.classList.add("inactive");
-  startTimer();
-}
 
 function updateAccuracy(card) {
   card.accuracy = card.appeared > 0 ? card.rightAnswers / card.appeared : 0;
@@ -529,7 +547,7 @@ function applyCorrectScore() {
 }
 
 function handleFirstTryCorrect(card, mode) {
-  if ((card.word_status === "mastered") & timeOut) {
+  if (card.word_status === "mastered" && timeOut) {
     card.levelStreak = 0;
   }
 
@@ -601,11 +619,11 @@ function handleCorrectAnswer(card, mode) {
 
   setTimeout(() => {
     feedbackBg.classList.remove("correct_bg");
-    updateUI();
+    resetState();
   }, 1000);
 }
 
-function handleWrongAnswer(card, selected) {
+function handleWrongAnswer(card, selected, mode) {
   const label = selected.closest("li");
 
   feedbackBg.classList.add("wrong_bg");
@@ -622,7 +640,7 @@ function handleWrongAnswer(card, selected) {
 
   console.log(currentTries);
   if (firstTry) {
-    handleFirstTryWrong(card);
+    handleFirstTryWrong(card, mode);
   } else {
     card.wrongTries += 1;
     saveProgress();
@@ -671,10 +689,6 @@ function applyCooldown(isCorrect, mode, timeToAnswer, tries) {
   saveProgress();
 }
 
-document.querySelectorAll(".submit").forEach((button) => {
-  button.addEventListener("click", onSubmit);
-});
-
 function onSubmit(e) {
   e.preventDefault();
 
@@ -711,7 +725,6 @@ function onSubmit(e) {
     });
   }
 }
-let clock;
 
 function startTimer() {
   startTime = performance.now();
@@ -738,10 +751,8 @@ function renderTimer(time = "00:00") {
 }
 
 function startCountDown() {
-  console.log();
-  let width = 100;
   countdownCon.style.display = "block";
-
+  let width = 100;
   if (countdownInterval) {
     clearInterval(countdownInterval);
   }
@@ -760,9 +771,44 @@ function startCountDown() {
   );
 }
 
+function resetState() {
+  if (clock) clearInterval(clock);
+  submitButtons.forEach((button) => {
+    button.disabled = false;
+  });
+  currentTries = 0;
+  firstTry = true;
+  flipQuestion = false;
+  btnDisabled = false;
+  timeOut = false;
+  submitted = false;
+  pickQuestionAndAnswers();
+  renderTimer();
+  if (chosenCard.isCountdown) startCountDown();
+  startTimer();
+  updateUI();
+}
+
+function updateUI() {
+  countdownCon.style.display = "none";
+  feedbackBg.classList.remove("correct_bg");
+  knowOrGuess.classList.add("hidden");
+  submitMainBtn.classList.remove("hidden");
+  feedback.textContent = "";
+  submitMainBtn.classList.add("inactive");
+}
+
+function startApp() {
+  loadProgress();
+  resetState();
+  renderTimer();
+  renderStats();
+}
+
+startApp();
+
 resetbtn.addEventListener("click", resetProgress);
 
-loadProgress();
-updateUI();
-renderTimer();
-renderStats();
+submitButtons.forEach((button) => {
+  button.addEventListener("click", onSubmit);
+});
