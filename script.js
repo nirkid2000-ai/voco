@@ -19,9 +19,30 @@ const starsFill = document.querySelector(".stars-fill");
 const countdown = document.querySelector(".countdown");
 const countdownCon = document.querySelector(".countdown_con");
 const submitButtons = document.querySelectorAll(".submit");
+const blindRecallLogo = document.querySelector(".blind_recall");
 
-const THIRTY_MINUTES = 30 * 60 * 1000;
-const THIRTY_SECONDS = 10 * 1000;
+const COOLDOWN_SETTINGS = {
+  DEFAULT: 10 * 1000, // debug
+  MIN: 1 * 1000,
+  MAX: 100 * 1000,
+
+  SPEED_MULTIPLIERS: {
+    under2s: 1.2,
+    under4s: 1.1,
+    normal: 1,
+  },
+
+  CORRECT_MULTIPLIERS: {
+    know: 1.4,
+    guess: 1,
+  },
+
+  WRONG_MULTIPLIERS: {
+    know: 0.6,
+    guess: 0.8,
+    multFails: 0.9,
+  },
+};
 
 const STORAGE_KEY = "vocab-app-progress-v1";
 
@@ -36,11 +57,10 @@ function createDefaultProgress() {
     accuracy: 0,
     wrongTries: 0,
     recalls: [],
-    coolDown: THIRTY_SECONDS,
+    coolDown: COOLDOWN_SETTINGS.DEFAULT,
     onCooldown: false,
     cooldownUntil: null,
     sinceCooldown: null,
-    isCountdown: false,
   };
 }
 
@@ -72,7 +92,6 @@ function saveProgress() {
         onCooldown: card.onCooldown,
         cooldownUntil: card.cooldownUntil,
         sinceCooldown: card.sinceCooldown,
-        isCountdown: card.isCountdown,
       },
     ]),
   );
@@ -128,25 +147,7 @@ function resetProgress() {
   console.log("reset");
   localStorage.removeItem(STORAGE_KEY);
 
-  cards = data.words.map((word, i) => ({
-    id: i + 1,
-    question: word.he,
-    answer: word.en,
-    diff: word.level,
-    word_status: "new",
-    appeared: 0,
-    rightAnswers: 0,
-    wordStreak: 0,
-    levelStreak: 0,
-    wrongAnswers: 0,
-    accuracy: 0,
-    wrongTries: 0,
-    recalls: [],
-    coolDown: THIRTY_SECONDS,
-    onCooldown: false,
-    cooldownUntil: null,
-    sinceCooldown: null,
-  }));
+  cards = createInitialCards();
 
   globalScore = 0;
   globalStreak = 0;
@@ -204,12 +205,12 @@ const COUNTDOWNTIMES = {
   recognized1: 30,
   known0: 25,
   known1: 20,
-  knownWell0: 20,
-  knownWell1: 15,
-  strong0: 10,
-  strong1: 5,
-  mastered0: 3,
-  mastered1: 3,
+  knownWell0: 8,
+  knownWell1: 7,
+  strong0: 7,
+  strong1: 6,
+  mastered0: 6,
+  mastered1: 5,
 };
 
 const DIFFLEVELS = {
@@ -233,11 +234,44 @@ let totalQs = 0;
 let currentSession = new Map();
 let startTime;
 let btnDisabled = false;
-let flipQuestion = false;
+let roundFlip;
+let blindRound;
+let countdownRound;
 let countdownInterval;
 let timeOut = false;
 let submitted = false;
+let blind;
 let clock;
+
+function shouldFlip(card) {
+  return (
+    (card.word_status === "strong" || card.word_status === "mastered") &&
+    card.levelStreak === 0
+  );
+}
+
+function shouldBlind(card) {
+  return (
+    card.word_status === "mastered" ||
+    (card.word_status === "strong" && card.levelStreak === 1)
+  );
+}
+
+function shouldCountdown(card) {
+  return (
+    card.word_status === "knownWell" ||
+    card.word_status === "strong" ||
+    card.word_status === "mastered"
+  );
+}
+
+function getStarsFill(card) {
+  return STARS[card.word_status + card.levelStreak];
+}
+
+function getCountdownDuration(card) {
+  return COUNTDOWNTIMES[card.word_status + card.levelStreak] * 2.5;
+}
 
 function chooseQuestion() {
   console.log(cards);
@@ -290,36 +324,46 @@ function chooseQuestion() {
   // check the highest appeared value and only allow questions with lower appered value show
   //if all appered values are equal then choose random from all cards.
   if (chosenCard) {
-    if (
-      chosenCard.word_status === "strong" ||
-      chosenCard.word_status === "mastered"
-    )
-      flipQuestion = true;
+    roundFlip = shouldFlip(chosenCard);
+    blindRound = shouldBlind(chosenCard);
+    countdownRound = shouldCountdown(chosenCard);
     chosenCard.appeared += 1;
-    qText.textContent = flipQuestion ? chosenCard.answer : chosenCard.question;
-    starsFill.classList.remove("animate");
-    levelText.textContent = HEBSTATUS[chosenCard.word_status];
-    difArrow.style.left = DIFFLEVELS[chosenCard.diff];
-    starsFill.style.setProperty(
-      "--fill",
-      `${STARS[chosenCard.word_status + chosenCard.levelStreak]}%`,
-    );
-    // } else {
-    // feedback.textContent = "טוווווווב!!! אתה יודע את כל המילים יא גאון שכמוך";
-    // qText.textContent = "";
-    // list.style.display = "none";
-    // qLabel.style.display = "none";
   }
+
+  return chosenCard;
 }
 
-function pickQuestionAndAnswers() {
-  chooseQuestion();
-  // uppdate 4 naswers in a a list with radio buttons.
-  if (chosenCard) {
-    function showAnswers() {
-      list.innerHTML = answers
-        .map(
-          (answer) => `
+function renderQuestionText(card) {
+  qText.textContent = roundFlip ? card.answer : card.question;
+}
+function updateWordStats(card) {
+  levelText.textContent = HEBSTATUS[card.word_status];
+  difArrow.style.left = DIFFLEVELS[card.diff];
+  starsFill.classList.remove("animate");
+  starsFill.style.setProperty("--fill", `${getStarsFill(card)}%`);
+}
+
+function renderQuestion(card) {
+  if (!card) return;
+  renderQuestionText(card);
+  updateWordStats(card);
+}
+
+function showAnswers(card) {
+  const correctAnswer = roundFlip ? card.question : card.answer;
+  const status = card.word_status;
+
+  const numberOfAns =
+    status === "knownWell"
+      ? 6
+      : status === "mastered" || status === "strong"
+        ? 5
+        : 4;
+  const answers = chooseAnswers(card, numberOfAns, correctAnswer);
+
+  list.innerHTML = answers
+    .map(
+      (answer) => `
         <li>
           <label class="answer_label">
             <input type="radio" name="answer" value="${answer}">
@@ -327,87 +371,73 @@ function pickQuestionAndAnswers() {
           </label>
         </li>
       `,
-        )
-        .join("");
+    )
+    .join("");
+}
+
+function chooseAnswers(card, num, correctAnswer) {
+  const answerKey = roundFlip ? "he" : "en";
+  const maxLenDiff =
+    card.word_status === "new" || card.word_status === "unknown"
+      ? 4
+      : card.word_status === "recognized" || card.word_status === "known"
+        ? 3
+        : 2;
+
+  const strictPool = data.words.filter((word) => {
+    const candidate = word[answerKey];
+    if (candidate === correctAnswer) return false;
+    if (word.level !== card.diff) return false;
+    return Math.abs(candidate.length - correctAnswer.length) <= maxLenDiff;
+  });
+
+  const sameLevelPool = data.words.filter((word) => {
+    const candidate = word[answerKey];
+    return candidate !== correctAnswer && word.level === card.diff;
+  });
+
+  const broadPool = data.words.filter((word) => {
+    return word[answerKey] !== correctAnswer;
+  });
+
+  const wrongAnswers = [];
+  const used = new Set();
+
+  function fillFromPool(pool) {
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+
+    for (const word of shuffled) {
+      const candidate = word[answerKey];
+      if (wrongAnswers.length >= num - 1) break;
+      if (used.has(candidate)) continue;
+
+      used.add(candidate);
+      wrongAnswers.push(candidate);
     }
+  }
 
-    const status = chosenCard.word_status;
+  fillFromPool(strictPool);
+  if (wrongAnswers.length < num - 1) fillFromPool(sameLevelPool);
+  if (wrongAnswers.length < num - 1) fillFromPool(broadPool);
 
-    const numberOfAns =
-      status === "mastered"
-        ? 6
-        : status === "knownWell" || status === "strong"
-          ? 5
-          : 4;
+  if (wrongAnswers.length < num - 1) {
+    throw new Error(
+      `Not enough unique answers to build ${num} options for "${correctAnswer}"`,
+    );
+  }
 
-    // const answerKey = flipQuestion ? "he" : "en";
-    const correctAnswer = flipQuestion
-      ? chosenCard.question
-      : chosenCard.answer;
+  const allAnswers = [...wrongAnswers];
+  const rightAnsPosition = Math.floor(Math.random() * num);
+  allAnswers.splice(rightAnsPosition, 0, correctAnswer);
 
-    const answers = chooseAnswers(numberOfAns, correctAnswer);
+  return allAnswers;
+}
 
-    function chooseAnswers(num, correctAnswer) {
-      const answerKey = flipQuestion ? "he" : "en";
-
-      const maxLenDiff =
-        chosenCard.word_status === "new" || chosenCard.word_status === "unknown"
-          ? 4
-          : chosenCard.word_status === "recognized" ||
-              chosenCard.word_status === "known"
-            ? 3
-            : 2;
-
-      const strictPool = data.words.filter((word) => {
-        const candidate = word[answerKey];
-        if (candidate === correctAnswer) return false;
-        if (word.level !== chosenCard.diff) return false;
-        return Math.abs(candidate.length - correctAnswer.length) <= maxLenDiff;
-      });
-
-      const sameLevelPool = data.words.filter((word) => {
-        const candidate = word[answerKey];
-        return candidate !== correctAnswer && word.level === chosenCard.diff;
-      });
-
-      const broadPool = data.words.filter((word) => {
-        return word[answerKey] !== correctAnswer;
-      });
-
-      const wrongAnswers = [];
-      const used = new Set();
-
-      function fillFromPool(pool) {
-        const shuffled = [...pool].sort(() => Math.random() - 0.5);
-
-        for (const word of shuffled) {
-          const candidate = word[answerKey];
-          if (wrongAnswers.length >= num - 1) break;
-          if (used.has(candidate)) continue;
-
-          used.add(candidate);
-          wrongAnswers.push(candidate);
-        }
-      }
-
-      fillFromPool(strictPool);
-      if (wrongAnswers.length < num - 1) fillFromPool(sameLevelPool);
-      if (wrongAnswers.length < num - 1) fillFromPool(broadPool);
-
-      if (wrongAnswers.length < num - 1) {
-        throw new Error(
-          `Not enough unique answers to build ${num} options for "${correctAnswer}"`,
-        );
-      }
-
-      const allAnswers = [...wrongAnswers];
-      const rightAnsPosition = Math.floor(Math.random() * num);
-      allAnswers.splice(rightAnsPosition, 0, correctAnswer);
-
-      return allAnswers;
-    }
-
-    showAnswers();
+function pickQuestionAndAnswers() {
+  const card = chooseQuestion();
+  renderQuestion(card);
+  if (card) {
+    showAnswers(card);
   }
 }
 
@@ -448,24 +478,20 @@ function promoteCard(card) {
   if (card.word_status === STATUS.KNOWN && card.levelStreak >= 2) {
     card.word_status = STATUS.KNOWWELL;
     card.levelStreak = 0;
-    card.isCountdown = true;
   }
 
   if (card.word_status === STATUS.KNOWWELL && card.levelStreak >= 2) {
     card.word_status = STATUS.STRONG;
     card.levelStreak = 0;
-    card.isCountdown = true;
   }
 
   if (card.word_status === STATUS.STRONG && card.levelStreak >= 2) {
     card.word_status = STATUS.MASTERED;
     card.levelStreak = 0;
-    card.isCountdown = true;
   }
   if (card.word_status === STATUS.MASTERED) {
     if (card.levelStreak >= 2) {
       card.levelStreak = 1;
-      card.isCountdown = true;
     }
   }
 }
@@ -474,31 +500,23 @@ function demoteCard(card) {
   if (card.word_status === STATUS.NEW) {
     card.word_status = STATUS.UNKNOWN;
     card.levelStreak = 0;
-    card.isCountdown = false;
-
     return;
   }
 
   if (card.word_status === STATUS.RECOGNIZED) {
     card.word_status = STATUS.UNKNOWN;
     card.levelStreak = 1;
-    card.isCountdown = false;
-
     return;
   }
 
   if (card.word_status === STATUS.KNOWN) {
     card.word_status = STATUS.RECOGNIZED;
     card.levelStreak = 1;
-    card.isCountdown = false;
-
     return;
   }
   if (card.word_status === STATUS.KNOWWELL) {
     card.word_status = STATUS.KNOWN;
     card.levelStreak = 1;
-    card.isCountdown = false;
-
     return;
   }
   if (card.word_status === STATUS.STRONG) {
@@ -511,15 +529,6 @@ function demoteCard(card) {
     card.word_status = STATUS.STRONG;
     card.levelStreak = 1;
   }
-}
-
-function updateWordStats(card) {
-  levelText.textContent = HEBSTATUS[card.word_status];
-  difArrow.style.left = DIFFLEVELS[card.diff];
-  starsFill.style.setProperty(
-    "--fill",
-    `${STARS[card.word_status + card.levelStreak]}%`,
-  );
 }
 
 function getTriesMessage(tries) {
@@ -584,7 +593,6 @@ function handleFirstTryWrong(card, mode) {
   card.wrongAnswers += 1;
   card.levelStreak = 0;
   card.wrongTries += 1;
-  console.log("clear count");
   clearInterval(countdownInterval);
   countdown.style.width = `0%`;
   // countdownCon.style.display = "none";
@@ -638,7 +646,6 @@ function handleWrongAnswer(card, selected, mode) {
   card.wordStreak = 0;
   renderStats();
 
-  console.log(currentTries);
   if (firstTry) {
     handleFirstTryWrong(card, mode);
   } else {
@@ -656,42 +663,45 @@ function handleWrongAnswer(card, selected, mode) {
   }, 1000);
 }
 
-function applyCooldown(isCorrect, mode, timeToAnswer, tries) {
+function applyCooldown(card, isCorrect, mode, timeToAnswer, tries) {
   console.log("cooldown:");
-  chosenCard.onCooldown = true;
+  card.onCooldown = true;
 
-  let cooldown = chosenCard.coolDown ?? 30 * 60 * 1000;
+  let cooldown = card.coolDown ?? COOLDOWN_SETTINGS.DEFAULT;
 
   const speedMult =
-    timeToAnswer / 1000 < 2 ? 1.2 : timeToAnswer / 1000 < 4 ? 1.1 : 1;
+    timeToAnswer / 1000 < 2
+      ? COOLDOWN_SETTINGS.SPEED_MULTIPLIERS.under2s
+      : timeToAnswer / 1000 < 4
+        ? COOLDOWN_SETTINGS.SPEED_MULTIPLIERS.under4s
+        : COOLDOWN_SETTINGS.SPEED_MULTIPLIERS.normal;
 
-  // const MIN = 10 * 60 * 1000;
-  // const MAX = 21 * 24 * 60 * 60 * 1000;
-  const MIN = 1000;
-  const MAX = 100000;
   if (isCorrect && mode === "know") {
-    cooldown *= 1.4 * speedMult;
+    cooldown *= COOLDOWN_SETTINGS.CORRECT_MULTIPLIERS.know * speedMult;
   } else if (isCorrect && mode === "guess") {
-    cooldown *= 1;
+    cooldown *= COOLDOWN_SETTINGS.CORRECT_MULTIPLIERS.guess;
   } else if (!isCorrect && mode === "guess") {
-    cooldown *= 0.8;
+    cooldown *= COOLDOWN_SETTINGS.WRONG_MULTIPLIERS.guess;
   } else if (!isCorrect && mode === "know") {
-    cooldown *= 0.6;
+    cooldown *= COOLDOWN_SETTINGS.WRONG_MULTIPLIERS.know;
   } else if (!isCorrect && mode === "main" && tries > 2) {
-    cooldown *= 0.9;
+    cooldown *= COOLDOWN_SETTINGS.WRONG_MULTIPLIERS.multFails;
   }
 
-  cooldown = Math.max(MIN, Math.min(MAX, cooldown));
+  cooldown = Math.max(
+    COOLDOWN_SETTINGS.MIN,
+    Math.min(COOLDOWN_SETTINGS.MAX, cooldown),
+  );
   const cooldownInSec = cooldown / 1000;
   console.log(cooldownInSec);
-  chosenCard.coolDown = cooldown;
-  chosenCard.cooldownUntil = Date.now() + cooldown;
+  card.coolDown = cooldown;
+  card.cooldownUntil = Date.now() + cooldown;
   saveProgress();
 }
 
 function onSubmit(e) {
   e.preventDefault();
-
+  const card = chosenCard;
   const button = e.currentTarget;
   if (btnDisabled) return;
   btnDisabled = true;
@@ -706,24 +716,24 @@ function onSubmit(e) {
     setTimeout(() => (feedback.textContent = ""), 1000);
     return;
   }
-  const key = flipQuestion ? "question" : "answer";
-  const correctAns = selected.value === chosenCard[key];
+  const key = roundFlip ? "question" : "answer";
+  const correctAns = selected.value === card[key];
   const duration = performance.now() - startTime;
   submitted = true;
-  currentTries++;
   // button.disabled = true;
-  applyCooldown(correctAns, mode, duration, currentTries);
+  applyCooldown(card, correctAns, mode, duration, currentTries);
 
   if (correctAns) {
-    handleCorrectAnswer(chosenCard, mode);
+    handleCorrectAnswer(card, mode);
   } else {
-    handleWrongAnswer(chosenCard, selected, mode);
+    handleWrongAnswer(card, selected, mode);
 
     btnDisabled = false;
     document.querySelectorAll(".submit").forEach((btn) => {
       btn.disabled = false;
     });
   }
+  currentTries++;
 }
 
 function startTimer() {
@@ -750,47 +760,76 @@ function renderTimer(time = "00:00") {
   timer.textContent = time;
 }
 
-function startCountDown() {
+function startCountDown(card) {
   countdownCon.style.display = "block";
+
   let width = 100;
   if (countdownInterval) {
     clearInterval(countdownInterval);
   }
 
-  countdownInterval = setInterval(
-    () => {
-      width -= 0.25;
-      countdown.style.width = `${width}%`;
+  const intervalMs = getCountdownDuration(card);
 
-      if (width <= 0 || submitted) {
-        clearInterval(countdownInterval);
-        timeOut = true;
-      }
-    },
-    `${COUNTDOWNTIMES[chosenCard.word_status + chosenCard.levelStreak]}` * 2.5,
-  );
+  countdownInterval = setInterval(() => {
+    width -= 0.25;
+    countdown.style.width = `${width}%`;
+
+    if (width <= 0 || submitted) {
+      clearInterval(countdownInterval);
+      timeOut = true;
+    }
+  }, intervalMs);
 }
 
 function resetState() {
+  countdownCon.style.display = "none";
+  blindRecallLogo.classList.add("hidden");
+  list.style.opacity = "1";
+  list.style.pointerEvents = "auto";
   if (clock) clearInterval(clock);
+  if (blind) clearTimeout(blind);
+
   submitButtons.forEach((button) => {
     button.disabled = false;
   });
   currentTries = 0;
   firstTry = true;
-  flipQuestion = false;
+  roundFlip = false;
+  blindRound = false;
+  countdownRound = false;
   btnDisabled = false;
   timeOut = false;
   submitted = false;
   pickQuestionAndAnswers();
   renderTimer();
-  if (chosenCard.isCountdown) startCountDown();
+  if (countdownRound) {
+    startCountDown(chosenCard);
+    if (blindRound) blindRecall(chosenCard);
+  }
+
   startTimer();
   updateUI();
 }
 
+function blindRecall(card) {
+  const flashEye = setInterval(
+    () => blindRecallLogo.classList.toggle("hidden"),
+    500,
+  );
+  const timeInMs = COUNTDOWNTIMES[card.word_status + card.levelStreak] * 1000;
+  const revealBeforeEnd = card.word_status === "strong" ? 2000 : 1500;
+
+  list.style.opacity = "0";
+  list.style.pointerEvents = "none";
+  blind = setTimeout(() => {
+    clearInterval(flashEye);
+    blindRecallLogo.classList.add("hidden");
+    list.style.opacity = "1";
+    list.style.pointerEvents = "auto";
+  }, timeInMs - revealBeforeEnd);
+}
+
 function updateUI() {
-  countdownCon.style.display = "none";
   feedbackBg.classList.remove("correct_bg");
   knowOrGuess.classList.add("hidden");
   submitMainBtn.classList.remove("hidden");

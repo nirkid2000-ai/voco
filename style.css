@@ -115,8 +115,10 @@
 }
 
 .answers_ui {
+  position: relative;
   display: flex;
   flex-direction: column;
+  align-items: center;
   /* background-color: #7bdb80; */
 }
 
@@ -226,10 +228,6 @@ input[type="radio"] {
   pointer-events: none;
 }
 
-.hidden {
-  display: none;
-}
-
 .countdown {
   position: absolute;
   z-index: 2;
@@ -254,4 +252,22 @@ input[type="radio"] {
   border-radius: 5px;
   height: 20px;
   width: 100%;
+}
+
+.blind_recall {
+  color: #434343;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: absolute;
+  top: 50px;
+  width: 150px;
+}
+
+.blind_logo {
+  fill: #434343;
+}
+
+.hidden {
+  display: none;
 }
