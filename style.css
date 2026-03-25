@@ -3,7 +3,16 @@
   padding: 0;
   margin: 0;
   font-family: Arial, Helvetica, sans-serif;
+  user-select: none;
 }
+
+/* .body {
+  user-select: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+} */
 
 .app {
   background-color: #ebfff6;
@@ -14,6 +23,11 @@
   align-items: center;
   justify-content: center;
   font-size: 18px;
+  user-select: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .questions {
@@ -37,6 +51,7 @@
   display: flex;
   /* align-items: center; */
   justify-content: space-between;
+  align-items: center;
   font-weight: bold;
   color: #595959;
 }
@@ -81,15 +96,6 @@
   fill: gold;
 }
 
-.stars-fill {
-  --fill: 0%;
-  clip-path: inset(0 0 0 var(--fill));
-}
-
-.animate {
-  transition: clip-path 0.3s ease;
-}
-
 .feedback {
   display: flex;
   align-items: center;
@@ -99,7 +105,7 @@
 }
 
 .feedbackbg {
-  margin-top: 70px;
+  margin-top: 40px;
   width: 300px;
   border-radius: 10px;
   padding: 0px 20px;
@@ -167,7 +173,7 @@
 }
 
 .q {
-  margin-bottom: 5px;
+  margin: 8px 0px;
   text-align: center;
   font-weight: bold;
   font-size: clamp(36px, 5vw, 48px);
@@ -182,8 +188,26 @@ input[type="radio"] {
   display: none;
 }
 
-.wordlist {
+.word_top {
   width: 100%;
+  display: flex;
+  justify-content: space-between;
+}
+
+.word_remove {
+  color: rgb(255, 78, 78);
+  background-color: #d8e9e1;
+  border-radius: 5px;
+  font-size: 10px;
+  padding: 0px 5px;
+  border: none;
+  cursor: pointer;
+}
+
+.wordlist {
+  font-size: 20px;
+  width: 100%;
+  text-transform: capitalize;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -193,7 +217,6 @@ input[type="radio"] {
 }
 .wordlist li {
   width: 100%;
-
   list-style: none;
   text-align: center;
   background-color: #1c9680;
@@ -204,14 +227,21 @@ input[type="radio"] {
   cursor: pointer;
 }
 
-.wordlist li:hover {
-  background-color: #39c188;
+@media (hover: hover) and (pointer: fine) {
+  .wordlist li:hover {
+    background-color: #39c188;
+  }
 }
 
 .wordlist li:has(input:checked) {
   background: #004044;
   color: white;
-  transition: 0.2s;
+  /* transition: 0.3s; */
+}
+
+.question_btn.selected {
+  outline: 3px solid #0066ff;
+  background-color: #39c18f;
 }
 
 .answer_label {
@@ -220,7 +250,7 @@ input[type="radio"] {
   height: 100%;
   transition: 0.2s;
   cursor: pointer;
-  padding: 8px 0px;
+  padding: 12px 0px;
 }
 
 .wrong {
@@ -235,6 +265,7 @@ input[type="radio"] {
   border-radius: 5px;
   height: 20px;
   width: 100%;
+  transform-origin: left center;
 }
 
 .countdown_bg {
@@ -254,9 +285,24 @@ input[type="radio"] {
   width: 100%;
 }
 
+.countdown.run {
+  animation-name: countdownShrink;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes countdownShrink {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
 .blind_recall {
   color: #434343;
-  display: flex;
+  display: none;
   flex-direction: column;
   align-items: center;
   position: absolute;
@@ -270,4 +316,52 @@ input[type="radio"] {
 
 .hidden {
   display: none;
+}
+
+.flip_logo {
+  display: none;
+  width: 25px;
+  opacity: 0.8;
+}
+
+.flip_1 {
+  fill: #3c553c;
+}
+
+.flip_2 {
+  fill: #222222;
+}
+
+/* button,
+.card,
+.option {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+} */
+
+.stars-fill {
+  --fill: 0%;
+  clip-path: inset(0 0 0 var(--fill));
+}
+
+.animate-fill {
+  transition: clip-path 0.4s ease;
+}
+
+.pop {
+  animation: starPop 400ms ease;
+}
+
+@keyframes starPop {
+  0% {
+    transform: scale(1);
+  }
+  80% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
