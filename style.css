@@ -104,16 +104,26 @@
   min-height: 1.5em;
 }
 
-.feedbackbg {
+.main_ui {
   margin-top: 40px;
   width: 300px;
-  border-radius: 10px;
+  /* border-radius: 10px; */
   padding: 0px 20px;
   padding-top: 10px;
 }
 
+.feedback_bg {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
 .correct_bg {
-  background-color: #7bdb80;
+  background-color: #7bdb88;
+}
+
+.late_bg {
+  background-color: #dbcd7b;
 }
 
 .wrong_bg {
@@ -265,7 +275,6 @@ input[type="radio"] {
   border-radius: 5px;
   height: 20px;
   width: 100%;
-  transform-origin: left center;
 }
 
 .countdown_bg {
@@ -285,24 +294,9 @@ input[type="radio"] {
   width: 100%;
 }
 
-.countdown.run {
-  animation-name: countdownShrink;
-  animation-timing-function: linear;
-  animation-fill-mode: forwards;
-}
-
-@keyframes countdownShrink {
-  from {
-    transform: scaleX(1);
-  }
-  to {
-    transform: scaleX(0);
-  }
-}
-
 .blind_recall {
+  display: flex;
   color: #434343;
-  display: none;
   flex-direction: column;
   align-items: center;
   position: absolute;
@@ -359,7 +353,7 @@ input[type="radio"] {
     transform: scale(1);
   }
   80% {
-    transform: scale(1.25);
+    transform: scale(1.15);
   }
   100% {
     transform: scale(1);

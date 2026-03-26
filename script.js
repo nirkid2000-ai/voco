@@ -14,7 +14,7 @@ const streakStat = document.querySelector(".streak_stat");
 const questionTimer = document.querySelector(".q_timer");
 const sessionTimer = document.querySelector(".set_timer");
 const totalFrom = document.querySelector(".total_from");
-const feedbackBg = document.querySelector(".feedbackbg");
+const feedbackBg = document.querySelector(".feedback_bg");
 const stars = document.querySelector(".stars");
 const starsFill = document.querySelector(".stars-fill");
 const countdown = document.querySelector(".countdown");
@@ -340,6 +340,11 @@ function renderQuestionText(card) {
 function updateWordStats(card) {
   levelText.textContent = HEBSTATUS[card.word_status];
   difArrow.style.left = DIFFLEVELS[card.diff];
+  if (submitted) {
+    starsFill.classList.add("animate-fill");
+  } else {
+    starsFill.classList.remove("animate-fill");
+  }
   starsFill.style.setProperty("--fill", `${getStarsFill(card)}%`);
 }
 
@@ -626,7 +631,18 @@ function handleFirstTryWrong(card, mode) {
 }
 
 function handleCorrectAnswer(card, mode) {
-  feedback.textContent = "כל הכבוד! תשובה נכונה";
+  if (mode === "know") {
+    if (timeOut) {
+      feedback.textContent = "תשובה נכונה אבל מאוחר מדי";
+      feedbackBg.classList.add("late_bg");
+    } else {
+      feedback.textContent = "כל הכבוד! תשובה נכונה";
+      feedbackBg.classList.add("correct_bg");
+    }
+  } else {
+    feedback.textContent = "הפעם צדקת";
+    feedbackBg.classList.add("late_bg");
+  }
 
   if (firstTry) {
     handleFirstTryCorrect(card, mode);
@@ -635,13 +651,14 @@ function handleCorrectAnswer(card, mode) {
   applyCorrectScore();
 
   renderStats();
-  feedbackBg.classList.add("correct_bg");
 
   renderTimer();
   if (questionClock) clearInterval(questionClock);
 
   setTimeout(() => {
     feedbackBg.classList.remove("correct_bg");
+    feedbackBg.classList.remove("late_bg");
+
     resetState();
   }, 1000);
 }
@@ -882,7 +899,6 @@ function resetState() {
 }
 
 function blindRecall(card) {
-  blindRecallLogo.classList.display = "flex";
   flashEye = setInterval(() => {
     blindRecallLogo.classList.toggle("hidden");
   }, 500);
@@ -911,8 +927,7 @@ function animatePop(el) {
 function updateUI() {
   console.log(currentSession);
   if (roundFlip) flipLogo.style.display = "block";
-  animatePop(stars);
-  feedbackBg.classList.remove("correct_bg");
+  animatePop(qText);
   knowOrGuess.classList.add("hidden");
   submitMainBtn.classList.remove("hidden");
   feedback.textContent = "";
