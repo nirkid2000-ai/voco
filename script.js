@@ -1,5 +1,5 @@
 "use strict";
-import data from "/latvian.js";
+import data from "/en3.js";
 
 const qText = document.querySelector(".q");
 const levelText = document.querySelector(".word_level");
@@ -23,6 +23,7 @@ const submitButtons = document.querySelectorAll(".submit");
 const removeWordBtn = document.querySelector(".word_remove");
 const blindRecallLogo = document.querySelector(".blind_recall");
 const flipLogo = document.querySelector(".flip_logo");
+const feedGrid = document.querySelector(".fb_grid");
 
 const COOLDOWN_SETTINGS = {
   DEFAULT: 20 * 1000, // debug
@@ -30,8 +31,8 @@ const COOLDOWN_SETTINGS = {
   MAX: 60 * 1000 * 20,
 
   SPEED_MULTIPLIERS: {
-    under2s: 1.2,
-    under4s: 1.1,
+    under2s: 1.5,
+    under4s: 1.3,
     normal: 1,
   },
 
@@ -48,6 +49,19 @@ const COOLDOWN_SETTINGS = {
 };
 
 const STORAGE_KEY = "vocab-app-progress-v1";
+
+const INPUT_TYPE = getInputType();
+
+const INPUT_TIME_OFFSETS = {
+  touch: 0,
+  pointer: 600,
+};
+
+function getInputType() {
+  const hasTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+
+  return hasTouch ? "touch" : "pointer";
+}
 
 function createDefaultProgress() {
   return {
@@ -73,8 +87,8 @@ function createDefaultProgress() {
 function createInitialCards() {
   return data.words.map((word, i) => ({
     id: i + 1,
-    question: word.he,
-    answer: word.en,
+    question: word.en,
+    answer: word.he,
     diff: word.level,
     ...createDefaultProgress(),
   }));
@@ -171,6 +185,8 @@ function resetProgress() {
 
 let cards = createInitialCards();
 
+const MIN_WORD_GAP = 5;
+
 const STATUS = {
   NEW: "new",
   UNKNOWN: "unknown",
@@ -207,9 +223,10 @@ const STARS = {
 };
 
 const COUNTDOWNTIMES = {
-  new0: 10,
-  unknown0: 10,
-  recognized0: 10,
+  new0: 30,
+  unknown0: 20,
+  unknown1: 20,
+  recognized0: 15,
   recognized1: 10,
   known0: 5,
   known1: 4,
@@ -240,6 +257,7 @@ let totalGuesses = 0;
 let totalCorrect = 0;
 let totalQs = 0;
 let currentSession = new Map();
+let currentSessionArr = [];
 let questionStartTime;
 let sessionStartTime;
 let btnDisabled = false;
@@ -253,6 +271,14 @@ let blind;
 let flashEye;
 let questionClock;
 let sessionClock;
+let recentWordIds = [];
+
+function rememberShownWord(card) {
+  recentWordIds.push(card.id);
+  if (recentWordIds.length > MIN_WORD_GAP) {
+    recentWordIds.shift();
+  }
+}
 
 function shouldFlip(card) {
   return (
@@ -269,7 +295,8 @@ function shouldBlind(card) {
 }
 
 function shouldCountdown(card) {
-  return !["new", "unknown", "recognized"].includes(card.word_status);
+  return true;
+  // return !["new", "unknown", "recognized"].includes(card.word_status);
 }
 
 function getStarsFill(card) {
@@ -277,14 +304,24 @@ function getStarsFill(card) {
 }
 
 function getCountdownDuration(card) {
-  return COUNTDOWNTIMES[card.word_status + card.levelStreak] * 2.5;
+  return (
+    COUNTDOWNTIMES[card.word_status + card.levelStreak] * 1000 +
+    INPUT_TIME_OFFSETS[INPUT_TYPE]
+  );
 }
 
 function chooseQuestion() {
   chosenCard = null;
   const now = Date.now();
 
-  const liveCards = cards.filter((card) => !card.isRemoved);
+  const allLiveCards = cards.filter((card) => !card.isRemoved);
+  const filteredLiveCards = allLiveCards.filter(
+    (card) => !recentWordIds.includes(card.id),
+  );
+
+  const liveCards =
+    filteredLiveCards.length > 0 ? filteredLiveCards : allLiveCards;
+
   const fromCooldowns = liveCards.filter(
     (card) => card.inCycle && card.cooldownUntil && now >= card.cooldownUntil,
   );
@@ -356,15 +393,14 @@ function renderQuestion(card) {
 
 function showAnswers(card) {
   const correctAnswer = roundFlip ? card.question : card.answer;
-  const status = card.word_status;
+  // const status = card.word_status;
 
-  const numberOfAns = blindRound
-    ? 4
-    : status === "knownWell"
-      ? 6
-      : status === "strong" || status === "known"
-        ? 5
-        : 4;
+  // const numberOfAns = blindRound
+  //   ? 4
+  //   : status === "knownWell" || status === "strong"
+  //     ? 5
+  //     : 4;
+  const numberOfAns = 4;
   const answers = chooseAnswers(card, numberOfAns, correctAnswer);
 
   list.innerHTML = answers
@@ -382,7 +418,7 @@ function showAnswers(card) {
 }
 
 function chooseAnswers(card, num, correctAnswer) {
-  const answerKey = roundFlip ? "he" : "en";
+  const answerKey = roundFlip ? "question" : "answer";
   const maxLenDiff =
     card.word_status === "new" || card.word_status === "unknown"
       ? 4
@@ -390,19 +426,19 @@ function chooseAnswers(card, num, correctAnswer) {
         ? 3
         : 2;
 
-  const strictPool = data.words.filter((word) => {
+  const strictPool = cards.filter((word) => {
     const candidate = word[answerKey];
     if (candidate === correctAnswer) return false;
-    if (word.level !== card.diff) return false;
+    if (word.diff !== card.diff) return false;
     return Math.abs(candidate.length - correctAnswer.length) <= maxLenDiff;
   });
 
-  const sameLevelPool = data.words.filter((word) => {
+  const sameLevelPool = cards.filter((word) => {
     const candidate = word[answerKey];
-    return candidate !== correctAnswer && word.level === card.diff;
+    return candidate !== correctAnswer && word.diff === card.diff;
   });
 
-  const broadPool = data.words.filter((word) => {
+  const broadPool = cards.filter((word) => {
     return word[answerKey] !== correctAnswer;
   });
 
@@ -443,6 +479,7 @@ function pickQuestionAndAnswers() {
   const card = chooseQuestion();
   renderQuestion(card);
   if (card) {
+    rememberShownWord(card);
     showAnswers(card);
   }
 }
@@ -484,7 +521,7 @@ function promoteCard(card) {
   }
 
   if (card.word_status === STATUS.RECOGNIZED && card.levelStreak >= 2) {
-    if (speedAvg < 2500) card.coolDown *= 2.5;
+    if (speedAvg < 2000 + INPUT_TIME_OFFSETS[INPUT_TYPE]) card.coolDown *= 2.5;
     card.word_status = STATUS.KNOWN;
     card.levelStreak = 0;
     console.log(card.coolDown);
@@ -600,6 +637,7 @@ function handleFirstTryCorrect(card, mode) {
   updateWordStats(card);
   updateAccuracy(card);
   currentSession.set(card.id, card);
+  currentSessionArr.push(card);
 
   renderStats();
 
@@ -624,6 +662,7 @@ function handleFirstTryWrong(card, mode) {
   demoteCard(card);
   updateWordStats(card);
   currentSession.set(card.id, card);
+  currentSessionArr.push(card);
 
   renderStats();
 
@@ -631,12 +670,17 @@ function handleFirstTryWrong(card, mode) {
 }
 
 function handleCorrectAnswer(card, mode) {
-  if (mode === "know") {
-    if (timeOut) {
-      feedback.textContent = "תשובה נכונה אבל מאוחר מדי";
-      feedbackBg.classList.add("late_bg");
+  if (firstTry) {
+    if (mode === "know") {
+      if (timeOut) {
+        feedback.textContent = "תשובה נכונה אבל מאוחר מדי";
+        feedbackBg.classList.add("late_bg");
+      } else {
+        feedback.textContent = "כל הכבוד! תשובה נכונה";
+        feedbackBg.classList.add("correct_bg");
+      }
     } else {
-      feedback.textContent = "כל הכבוד! תשובה נכונה";
+      feedback.textContent = " ניחוש מוצלח";
       feedbackBg.classList.add("correct_bg");
     }
   } else {
@@ -652,10 +696,10 @@ function handleCorrectAnswer(card, mode) {
 
   renderStats();
 
-  renderTimer();
   if (questionClock) clearInterval(questionClock);
 
   setTimeout(() => {
+    renderTimer();
     feedbackBg.classList.remove("correct_bg");
     feedbackBg.classList.remove("late_bg");
 
@@ -702,9 +746,9 @@ function applyCooldown(card, isCorrect, mode, timeToAnswer, tries) {
   let cooldown = card.coolDown ?? COOLDOWN_SETTINGS.DEFAULT;
 
   const speedMult =
-    timeToAnswer / 1000 < 2
+    timeToAnswer < 2000 + INPUT_TIME_OFFSETS[INPUT_TYPE]
       ? COOLDOWN_SETTINGS.SPEED_MULTIPLIERS.under2s
-      : timeToAnswer / 1000 < 4
+      : timeToAnswer < 4000 + INPUT_TIME_OFFSETS[INPUT_TYPE]
         ? COOLDOWN_SETTINGS.SPEED_MULTIPLIERS.under4s
         : COOLDOWN_SETTINGS.SPEED_MULTIPLIERS.normal;
 
@@ -737,8 +781,7 @@ function calcScore(correctAns, mode, duration, card) {
     qScore = 0;
   } else {
     const numOptions = list.children.length;
-    const seconds = duration / 1000;
-
+    const seconds = (duration + (INPUT_TIME_OFFSETS[INPUT_TYPE] ?? 0)) / 1000;
     // Base difficulty
     let correctBase =
       mode === "know"
@@ -763,6 +806,48 @@ function calcScore(correctAns, mode, duration, card) {
   console.log(qScore, card.last5Scores, card.recentScore);
 }
 
+function updateFeedbackGrid(answerCategory) {
+  console.log(answerCategory);
+  let classToAdd;
+  if (answerCategory === "correct") {
+    classToAdd = "correct_cube";
+  } else if (answerCategory === "guess") {
+    classToAdd = "guess_cube";
+  } else if (answerCategory === "late_correct") {
+    classToAdd = "late_cube";
+  } else if (answerCategory === "wrong") {
+    classToAdd = "wrong_cube";
+  }
+  const cube = document.createElement("div");
+  cube.classList.add("cube");
+  cube.classList.add(classToAdd);
+  feedGrid.append(cube);
+  const allCubes = document.getElementsByClassName("cube");
+  const numberOfCubes = allCubes.length;
+  for (const cube of allCubes) {
+    if (numberOfCubes <= 30) {
+      cube.style.width = "15px";
+      cube.style.height = "15px";
+    } else if (numberOfCubes <= 60) {
+      cube.style.width = "11px";
+      cube.style.height = "11px";
+    } else if (numberOfCubes <= 96) {
+      cube.style.width = "6px";
+      cube.style.height = "6px";
+    } else {
+      cube.style.width = "4px";
+      cube.style.height = "4px";
+    }
+  }
+}
+
+function evaluateAnswer(correctAns, mode) {
+  if (correctAns && !timeOut && mode === "know") return "correct";
+  else if (correctAns && mode === "guess") return "guess";
+  else if (correctAns && timeOut && mode === "know") return "late_correct";
+  else if (!correctAns) return "wrong";
+}
+
 function onSubmit(e) {
   e.preventDefault();
   const card = chosenCard;
@@ -783,15 +868,31 @@ function onSubmit(e) {
   const key = roundFlip ? "question" : "answer";
   const correctAns = selected.value === card[key];
   const duration = performance.now() - questionStartTime;
+
+  if (countdownRound && firstTry) {
+    const totalMs = getCountdownDuration(card);
+    const progress = Math.min(duration / totalMs, 1);
+    const width = 100 * (1 - progress);
+    countdown.style.width = `${width}%`;
+  }
+
+  const answerCategory = evaluateAnswer(correctAns, mode);
+
+  console.log(answerCategory);
   submitted = true;
   // button.disabled = true;
   if (firstTry) {
     card.engaged += 1;
     calcScore(correctAns, mode, duration, card);
+    updateFeedbackGrid(answerCategory);
   }
   currentTries++;
 
   applyCooldown(card, correctAns, mode, duration, currentTries);
+
+  if (firstTry && countdownRound) {
+    timeOut = duration >= getCountdownDuration(card);
+  }
 
   if (correctAns) {
     handleCorrectAnswer(card, mode);
@@ -805,18 +906,35 @@ function onSubmit(e) {
   }
 }
 
+// function startQuestionTimer() {
+//   let thisQuestionSeconds = 0;
+//   questionStartTime = performance.now();
+//   function tick() {
+//     thisQuestionSeconds += 1;
+//     const questionSeconds = String(thisQuestionSeconds % 60).padStart(2, 0);
+//     const questionMinutes = String(
+//       Math.floor(thisQuestionSeconds / 60),
+//     ).padStart(2, 0);
+//     questionTimer.textContent = `${questionMinutes}:${questionSeconds}`;
+//   }
+//   questionClock = setInterval(tick, 1000);
+// }
+
 function startQuestionTimer() {
-  let thisQuestionSeconds = 0;
   questionStartTime = performance.now();
+
   function tick() {
-    thisQuestionSeconds += 1;
-    const questionSeconds = String(thisQuestionSeconds % 60).padStart(2, 0);
-    const questionMinutes = String(
-      Math.floor(thisQuestionSeconds / 60),
-    ).padStart(2, 0);
-    questionTimer.textContent = `${questionMinutes}:${questionSeconds}`;
+    const elapsedMs = performance.now() - questionStartTime;
+    const seconds = String(Math.floor(elapsedMs / 1000)).padStart(2, "0");
+    const centiseconds = String(Math.floor(elapsedMs / 10) % 100).padStart(
+      2,
+      "0",
+    );
+    questionTimer.textContent = `${seconds}:${centiseconds}`;
   }
-  questionClock = setInterval(tick, 1000);
+
+  tick();
+  questionClock = setInterval(tick, 16);
 }
 
 function startSessionTimer() {
@@ -844,37 +962,69 @@ function renderTimer(time = "00:00") {
   questionTimer.textContent = time;
 }
 
+// function startCountDown(card) {
+//   countdownCon.style.display = "block";
+//   countdown.style.width = "100%";
+
+//   let width = 100;
+//   if (countdownInterval) {
+//     clearInterval(countdownInterval);
+//   }
+
+//   const intervalMs = getCountdownDuration(card);
+
+//   countdownInterval = setInterval(() => {
+//     width -= 0.25;
+//     countdown.style.width = `${width}%`;
+
+//     if (width <= 0 || submitted) {
+//       clearInterval(countdownInterval);
+//       timeOut = true;
+//     }
+//   }, intervalMs);
+// }
+
 function startCountDown(card) {
   countdownCon.style.display = "block";
-  countdown.style.width = "100%";
 
-  let width = 100;
-  if (countdownInterval) {
-    clearInterval(countdownInterval);
-  }
+  const totalMs = getCountdownDuration(card);
 
-  const intervalMs = getCountdownDuration(card);
+  if (countdownInterval) clearInterval(countdownInterval);
 
-  countdownInterval = setInterval(() => {
-    width -= 0.25;
+  function tick() {
+    const elapsed = performance.now() - questionStartTime;
+    const progress = Math.min(elapsed / totalMs, 1);
+    const width = 100 * (1 - progress);
+
     countdown.style.width = `${width}%`;
 
-    if (width <= 0 || submitted) {
+    if (submitted) {
+      clearInterval(countdownInterval);
+      return;
+    }
+
+    if (progress >= 1) {
       clearInterval(countdownInterval);
       timeOut = true;
     }
-  }, intervalMs);
+  }
+
+  tick();
+  countdownInterval = setInterval(tick, 16);
 }
 
 function resetState() {
   flipLogo.style.display = "none";
   countdownCon.style.display = "none";
   blindRecallLogo.classList.add("hidden");
+
   if (flashEye) clearInterval(flashEye);
+  if (questionClock) clearInterval(questionClock);
+  if (countdownInterval) clearInterval(countdownInterval);
+  if (blind) clearInterval(blind);
+
   list.style.opacity = "1";
   list.style.pointerEvents = "auto";
-  if (questionClock) clearInterval(questionClock);
-  if (blind) clearTimeout(blind);
 
   submitButtons.forEach((button) => {
     button.disabled = false;
@@ -887,35 +1037,48 @@ function resetState() {
   btnDisabled = false;
   timeOut = false;
   submitted = false;
+
   pickQuestionAndAnswers();
-  renderTimer();
+  updateUI();
+
+  startQuestionTimer();
+
   if (countdownRound) {
     startCountDown(chosenCard);
     if (blindRound) blindRecall(chosenCard);
   }
-
-  startQuestionTimer();
-  updateUI();
 }
 
 function blindRecall(card) {
-  flashEye = setInterval(() => {
-    blindRecallLogo.classList.toggle("hidden");
-  }, 500);
+  const totalCountdownMs = getCountdownDuration(card);
 
-  const totalCountdownMs = getCountdownDuration(card) * 400;
-  const revealBeforeEnd = card.word_status === "strong" ? 2000 : 1500;
-  const hideDuration = Math.max(0, totalCountdownMs - revealBeforeEnd);
+  const revealBeforeEnd =
+    card.word_status === "strong"
+      ? 2000 + INPUT_TIME_OFFSETS[INPUT_TYPE]
+      : 1500 + INPUT_TIME_OFFSETS[INPUT_TYPE];
+  const revealAtMs = Math.max(0, totalCountdownMs - revealBeforeEnd);
 
   list.style.opacity = "0";
   list.style.pointerEvents = "none";
 
-  blind = setTimeout(() => {
-    clearInterval(flashEye);
-    blindRecallLogo.classList.add("hidden");
-    list.style.opacity = "1";
-    list.style.pointerEvents = "auto";
-  }, hideDuration);
+  flashEye = setInterval(() => {
+    blindRecallLogo.classList.toggle("hidden");
+  }, 500);
+
+  function checkReveal() {
+    const elapsed = performance.now() - questionStartTime;
+
+    if (elapsed >= revealAtMs || submitted) {
+      clearInterval(flashEye);
+      blindRecallLogo.classList.add("hidden");
+      list.style.opacity = "1";
+      list.style.pointerEvents = "auto";
+      clearInterval(blind);
+    }
+  }
+
+  checkReveal();
+  blind = setInterval(checkReveal, 16);
 }
 
 function animatePop(el) {
@@ -926,6 +1089,7 @@ function animatePop(el) {
 
 function updateUI() {
   console.log(currentSession);
+  console.log(currentSessionArr);
   if (roundFlip) flipLogo.style.display = "block";
   animatePop(qText);
   knowOrGuess.classList.add("hidden");
@@ -938,9 +1102,9 @@ function startApp() {
   if (sessionClock) clearInterval(sessionClock);
   sessionTimer.textContent = "00:00";
   currentSession = new Map();
+  currentSessionArr = [];
   loadProgress();
   resetState();
-  renderTimer();
   renderStats();
   startSessionTimer();
 }
