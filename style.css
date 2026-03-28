@@ -405,3 +405,10 @@ input[type="radio"] {
 .text_stats {
   display: none;
 }
+
+.menu_btns {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  margin: 15px 0px;
+}
