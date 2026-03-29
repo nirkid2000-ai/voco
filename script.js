@@ -31,7 +31,9 @@ const overlayWord = document.querySelector(".meaning_word");
 const overlayText = document.querySelector(".meaning_text");
 const overlayExample = document.querySelector(".meaning_example");
 const overlayTime = document.querySelector(".time_to_answer");
+const overlayAvg = document.querySelector(".avg_answer");
 const overlayCooldown = document.querySelector(".next_cooldown");
+const lastRecalls = document.querySelector(".last_recalls");
 
 const STORAGE_KEY = "vocab-app-progress-v1";
 
@@ -253,14 +255,16 @@ function msToSeconds(milliseconds) {
   return `${String(seconds).padStart(2, "0")}:${String(centiseconds).padStart(2, "0")}`;
 }
 
-function showMeaning(card, onDone) {
+function showMeaning(card, speedAvg, onDone) {
   pendingNext = onDone;
-
+  show_answers_circles(card);
   overlayWord.textContent = card.question;
   overlayText.textContent = card.meaning || card.answer;
   overlayTime.textContent = `זמן מענה: ${msToSeconds(
     performance.now() - questionStartTime,
   )} שניות`;
+  overlayAvg.textContent = `זמן מענה ממוצע: ${msToSeconds(speedAvg)} שניות`;
+
   overlayCooldown.textContent = `זמן קולדאון: ${msToTime(card.coolDown)}`;
   // show example only for weaker words
   overlayExample.textContent =
@@ -724,7 +728,7 @@ function handleFirstTryWrong(card, mode) {
   saveProgress();
 }
 
-function handleCorrectAnswer(card, mode) {
+function handleCorrectAnswer(card, mode, speedAvg) {
   if (firstTry) {
     if (mode === "know") {
       if (timeOut) {
@@ -753,7 +757,7 @@ function handleCorrectAnswer(card, mode) {
 
   if (questionClock) clearInterval(questionClock);
 
-  showMeaning(card, () => {
+  showMeaning(card, speedAvg, () => {
     // renderTimer();
     feedbackBg.classList.remove("correct_bg");
     feedbackBg.classList.remove("late_bg");
@@ -864,19 +868,19 @@ function calcScore(correctAns, mode, duration, card) {
 }
 
 function updateFeedbackGrid(answerCategory) {
-  let classToAdd;
-  if (answerCategory === "correct") {
-    classToAdd = "correct_cube";
-  } else if (answerCategory === "guess") {
-    classToAdd = "guess_cube";
-  } else if (answerCategory === "late_correct") {
-    classToAdd = "late_cube";
-  } else if (answerCategory === "wrong") {
-    classToAdd = "wrong_cube";
-  }
+  // let classToAdd;
+  // if (answerCategory === "correct") {
+  //   classToAdd = "correct_answer";
+  // } else if (answerCategory === "guess") {
+  //   classToAdd = "guess_answer";
+  // } else if (answerCategory === "late_correct") {
+  //   classToAdd = "late_answer";
+  // } else if (answerCategory === "wrong") {
+  //   classToAdd = "wrong_answer";
+  // }
   const cube = document.createElement("div");
   cube.classList.add("cube");
-  cube.classList.add(classToAdd);
+  cube.classList.add(answerCategory);
   feedGrid.append(cube);
   const allCubes = document.getElementsByClassName("cube");
   const numberOfCubes = allCubes.length;
@@ -897,13 +901,24 @@ function updateFeedbackGrid(answerCategory) {
   }
 }
 
+function show_answers_circles(card) {
+  let circleClass;
+  lastRecalls.textContent = "";
+  for (const circle of card.recalls) {
+    const circle_fb = document.createElement("div");
+    circle_fb.classList.add("recalls_circle");
+    circle_fb.classList.add(Object.keys(circle)[0]);
+    lastRecalls.append(circle_fb);
+  }
+}
+
 function evaluateAnswer(correctAns, mode) {
   console.log(correctAns, mode);
-  if (correctAns && !timeOut && mode === "know") return "correct";
-  else if (correctAns && mode === "main") return "recover_correct";
+  if (correctAns && !timeOut && mode === "know") return "correct_answer";
+  else if (correctAns && mode === "main") return "recovery_correct";
   else if (correctAns && mode === "guess") return "guess";
   else if (correctAns && timeOut && mode === "know") return "late_correct";
-  else if (!correctAns) return "wrong";
+  else if (!correctAns) return "wrong_answer";
 }
 
 function onSubmit(e) {
@@ -935,8 +950,19 @@ function onSubmit(e) {
   }
 
   const answerCategory = evaluateAnswer(correctAns, mode);
-  if (answerCategory !== "wrong")
+  if (answerCategory !== "wrong_answer")
     chosenCard.recalls.push({ [answerCategory]: Math.floor(duration) });
+
+  const last5recalls = card.recalls.slice(-5);
+  let speedAvg = null;
+
+  if (last5recalls.length) {
+    const sum = last5recalls.reduce((sum, obj) => {
+      return sum + Object.values(obj)[0];
+    }, 0);
+    speedAvg = sum / last5recalls.length;
+    console.log(speedAvg);
+  }
 
   console.log(answerCategory);
   submitted = true;
@@ -955,7 +981,7 @@ function onSubmit(e) {
   }
 
   if (correctAns) {
-    handleCorrectAnswer(card, mode);
+    handleCorrectAnswer(card, mode, speedAvg);
   } else {
     handleWrongAnswer(card, selected, mode);
 
@@ -1001,7 +1027,8 @@ function startSessionTimer() {
 function renderStats() {
   scoreStat.textContent = `${globalScore}`;
   streakStat.textContent = `${globalStreak}`;
-  totalFrom.textContent = `${totalCorrect} מתוך ${totalQs} (ניחושים ${correctGuesses})`;
+  totalFrom.textContent = `${totalCorrect}/${totalQs}`;
+  // totalFrom.textContent = `${totalCorrect} מתוך ${totalQs} (ניחושים ${correctGuesses})`;
 }
 
 // function renderTimer(time = "00:00") {

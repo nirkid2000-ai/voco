@@ -15,8 +15,13 @@
               <div class="meaning_word">Word</div>
               <div class="meaning_text">meaning</div>
               <div class="meaning_example">This sentence as an example</div>
-              <div class="time_to_answer">This is the time</div>
-              <div class="next_cooldown">This is the next cooldowntime</div>
+              <div class="last_recalls"></div>
+
+              <div class="card_stats">
+                <div class="time_to_answer">This is the time</div>
+                <div class="avg_answer">This is the avg time</div>
+                <div class="next_cooldown">This is the next cooldowntime</div>
+              </div>
             </div>
             <div class="questions">
               <!-- <div class="q_label">מה פירוש המילה?</div> -->
@@ -189,6 +194,19 @@
 
           <button class="next_btn">דלג שאלה</button>
           <div class="timer">
+            <div class="text_stats">
+              <div class="streak">
+                <label
+                  >רצף תשובות נכונות:<span class="streak_stat">0</span>
+                </label>
+              </div>
+              <div class="total_stat">
+                <label>תשובות נכונות:<span class="total_from">0</span> </label>
+              </div>
+              <div class="score">
+                <label>ניקוד:<span class="score_stat">0</span> </label>
+              </div>
+            </div>
             <!-- <label>זמן שאלה:<span class="q_timer">00:00</span> </label> -->
             <label>זמן תרגול: <span class="set_timer">00:00</span> </label>
           </div>
@@ -198,18 +216,6 @@
             <button class="reset">reset</button>
             <button class="start">start</button>
           </div>
-        </div>
-      </div>
-
-      <div class="text_stats">
-        <div class="streak">
-          <label>רצף תשובות נכונות:<span class="streak_stat">0</span> </label>
-        </div>
-        <div class="total_stat">
-          <label>סה״כ תשובות נכונות:<span class="total_from">0</span> </label>
-        </div>
-        <div class="score">
-          <label>ניקוד:<span class="score_stat">0</span> </label>
         </div>
       </div>
     </div>

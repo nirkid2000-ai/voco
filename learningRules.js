@@ -41,9 +41,9 @@ export const LEARNING_RULES = {
 
   stageCountdowns: {
     new0: 30,
-    unknown0: 20,
-    unknown1: 20,
-    recognized0: 15,
+    unknown0: 16,
+    unknown1: 14,
+    recognized0: 12,
     recognized1: 10,
     known0: 8,
     known1: 6,
