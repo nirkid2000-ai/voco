@@ -155,7 +155,7 @@
 
 .btns {
   width: 100%;
-  margin-bottom: 5px;
+  margin-bottom: 15px;
   margin-top: 5px;
   display: flex;
   flex-direction: column;
@@ -451,6 +451,7 @@ input[type="radio"] {
   opacity: 1;
   transform: scale(1);
   pointer-events: auto;
+  color: #ffffff;
 }
 
 .meaning_word {
@@ -458,16 +459,20 @@ input[type="radio"] {
   text-transform: capitalize;
   font-weight: bold;
   color: #ffffff;
-  margin-bottom: 8px;
 }
 
 .meaning_text {
-  font-size: 22px;
+  font-size: 30px;
   margin-bottom: 6px;
-  color: #ffffff;
 }
 
 .meaning_example {
   font-size: 0.9rem;
   opacity: 0.75;
+}
+
+.timer {
+  color: #2c2c2c;
+  font-weight: bold;
+  font-size: 16px;
 }

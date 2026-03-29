@@ -12,11 +12,11 @@ const knowOrGuess = document.querySelector(".knoworguess");
 const feedback = document.querySelector(".feedback");
 const scoreStat = document.querySelector(".score_stat");
 const streakStat = document.querySelector(".streak_stat");
-const questionTimer = document.querySelector(".q_timer");
+// const questionTimer = document.querySelector(".q_timer");
 const sessionTimer = document.querySelector(".set_timer");
 const totalFrom = document.querySelector(".total_from");
 const feedbackBg = document.querySelector(".feedback_bg");
-const stars = document.querySelector(".stars");
+// const stars = document.querySelector(".stars");
 const starsFill = document.querySelector(".stars-fill");
 const countdown = document.querySelector(".countdown");
 const countdownCon = document.querySelector(".countdown_con");
@@ -30,6 +30,8 @@ const overlay = document.querySelector(".meaning_overlay");
 const overlayWord = document.querySelector(".meaning_word");
 const overlayText = document.querySelector(".meaning_text");
 const overlayExample = document.querySelector(".meaning_example");
+const overlayTime = document.querySelector(".time_to_answer");
+const overlayCooldown = document.querySelector(".next_cooldown");
 
 const STORAGE_KEY = "vocab-app-progress-v1";
 
@@ -237,18 +239,35 @@ function enableOverlayInteractions() {
 
 enableOverlayInteractions();
 
+function msToTime(milliseconds) {
+  const minutes = Math.floor(milliseconds / 60000);
+  const seconds = Math.floor((milliseconds % 60000) / 1000);
+
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function msToSeconds(milliseconds) {
+  const seconds = Math.floor(milliseconds / 1000);
+  const centiseconds = Math.floor((milliseconds % 1000) / 10);
+
+  return `${String(seconds).padStart(2, "0")}:${String(centiseconds).padStart(2, "0")}`;
+}
+
 function showMeaning(card, onDone) {
   pendingNext = onDone;
 
   overlayWord.textContent = card.question;
   overlayText.textContent = card.meaning || card.answer;
-
+  overlayTime.textContent = `זמן מענה: ${msToSeconds(
+    performance.now() - questionStartTime,
+  )} שניות`;
+  overlayCooldown.textContent = `זמן קולדאון: ${msToTime(card.coolDown)}`;
   // show example only for weaker words
   overlayExample.textContent =
     card.word_status === "new" ||
     card.word_status === "unknown" ||
     card.word_status === "recognized"
-      ? card.example || ""
+      ? card.example || "..."
       : "";
 
   overlay.classList.add("show");
@@ -267,7 +286,7 @@ function finishOverlay() {
   setTimeout(() => {
     if (pendingNext) pendingNext();
     pendingNext = null;
-  }, 32);
+  }, 0);
 }
 
 function getInputOffset() {
@@ -516,7 +535,9 @@ function promoteCard(card) {
   let speedAvg = null;
 
   if (last5recalls.length) {
-    const sum = last5recalls.reduce((acc, val) => acc + val, 0);
+    const sum = last5recalls.reduce((sum, obj) => {
+      return sum + Object.values(obj)[0];
+    }, 0);
     speedAvg = sum / last5recalls.length;
     console.log(speedAvg);
   }
@@ -667,8 +688,7 @@ function handleFirstTryCorrect(card, mode) {
   globalStreak += 1;
   totalCorrect += 1;
   totalQs += 1;
-  const duration = performance.now() - questionStartTime;
-  chosenCard.recalls.push(Math.floor(duration));
+
   updateWordStats(card);
   updateAccuracy(card);
   currentSession.set(card.id, card);
@@ -734,7 +754,7 @@ function handleCorrectAnswer(card, mode) {
   if (questionClock) clearInterval(questionClock);
 
   showMeaning(card, () => {
-    renderTimer();
+    // renderTimer();
     feedbackBg.classList.remove("correct_bg");
     feedbackBg.classList.remove("late_bg");
     resetState();
@@ -915,6 +935,8 @@ function onSubmit(e) {
   }
 
   const answerCategory = evaluateAnswer(correctAns, mode);
+  if (answerCategory !== "wrong")
+    chosenCard.recalls.push({ [answerCategory]: Math.floor(duration) });
 
   console.log(answerCategory);
   submitted = true;
@@ -947,18 +969,18 @@ function onSubmit(e) {
 function startQuestionTimer() {
   questionStartTime = performance.now();
 
-  function tick() {
-    const elapsedMs = performance.now() - questionStartTime;
-    const seconds = String(Math.floor(elapsedMs / 1000)).padStart(2, "0");
-    const centiseconds = String(Math.floor(elapsedMs / 10) % 100).padStart(
-      2,
-      "0",
-    );
-    questionTimer.textContent = `${seconds}:${centiseconds}`;
-  }
+  // function tick() {
+  //   const elapsedMs = performance.now() - questionStartTime;
+  //   const seconds = String(Math.floor(elapsedMs / 1000)).padStart(2, "0");
+  //   const centiseconds = String(Math.floor(elapsedMs / 10) % 100).padStart(
+  //     2,
+  //     "0",
+  //   );
+  //   questionTimer.textContent = `${seconds}:${centiseconds}`;
+  // }
 
-  tick();
-  questionClock = setInterval(tick, 100);
+  // tick();
+  // questionClock = setInterval(tick, 100);
 }
 
 function startSessionTimer() {
@@ -982,9 +1004,9 @@ function renderStats() {
   totalFrom.textContent = `${totalCorrect} מתוך ${totalQs} (ניחושים ${correctGuesses})`;
 }
 
-function renderTimer(time = "00:00") {
-  questionTimer.textContent = time;
-}
+// function renderTimer(time = "00:00") {
+//   questionTimer.textContent = time;
+// }
 
 function startCountDown(card) {
   countdownCon.style.display = "block";
