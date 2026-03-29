@@ -227,7 +227,6 @@ input[type="radio"] {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  margin-top: 6px;
   user-select: none;
 }
 .wordlist li {
@@ -236,10 +235,14 @@ input[type="radio"] {
   text-align: center;
   background-color: #1c9680;
   color: white;
-  margin: 5px 0px;
+  margin: 0px 0px 5px;
   border: none;
   border-radius: 5px;
   cursor: pointer;
+}
+
+.wordlist > *:last-child {
+  margin: 0;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -411,4 +414,60 @@ input[type="radio"] {
   display: flex;
   justify-content: space-between;
   margin: 15px 0px;
+}
+
+.wordlist_wrap {
+  width: 100%;
+  position: relative;
+  margin: 6px 0px;
+}
+
+.meaning_overlay {
+  position: absolute;
+  inset: 0;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  text-align: center;
+  padding: 16px;
+
+  background: #004044;
+  border-radius: 4px;
+
+  opacity: 0;
+  /* transform: scale(0.96); */
+  pointer-events: none;
+
+  transition:
+    opacity 0.14s ease,
+    transform 0.14s ease;
+  z-index: 10;
+}
+
+.meaning_overlay.show {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+
+.meaning_word {
+  font-size: clamp(36px, 5vw, 48px);
+  text-transform: capitalize;
+  font-weight: bold;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+
+.meaning_text {
+  font-size: 22px;
+  margin-bottom: 6px;
+  color: #ffffff;
+}
+
+.meaning_example {
+  font-size: 0.9rem;
+  opacity: 0.75;
 }

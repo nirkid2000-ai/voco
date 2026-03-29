@@ -26,15 +26,14 @@ const blindRecallLogo = document.querySelector(".blind_recall");
 const flipLogo = document.querySelector(".flip_logo");
 const feedGrid = document.querySelector(".fb_grid");
 const startBtn = document.querySelector(".start");
+const overlay = document.querySelector(".meaning_overlay");
+const overlayWord = document.querySelector(".meaning_word");
+const overlayText = document.querySelector(".meaning_text");
+const overlayExample = document.querySelector(".meaning_example");
 
 const STORAGE_KEY = "vocab-app-progress-v1";
 
 const INPUT_TYPE = getInputType();
-
-const INPUT_TIME_OFFSETS = {
-  touch: 0,
-  pointer: 600,
-};
 
 function getInputType() {
   const hasTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
@@ -146,7 +145,6 @@ function loadProgress() {
 }
 
 function resetProgress() {
-  console.log("reset");
   localStorage.removeItem(STORAGE_KEY);
 
   cards = createInitialCards();
@@ -210,6 +208,84 @@ let questionClock;
 let sessionClock;
 let recentWordIds = [];
 
+let overlayTimeout = null;
+let isHolding = false;
+let pendingNext = null;
+
+function holdStart() {
+  isHolding = true;
+  clearTimeout(overlayTimeout);
+}
+
+function holdEnd() {
+  if (!isHolding) return;
+  isHolding = false;
+  finishOverlay();
+}
+
+function enableOverlayInteractions() {
+  if (INPUT_TYPE === "touch") {
+    overlay.addEventListener("pointerdown", holdStart);
+    overlay.addEventListener("pointerup", holdEnd);
+    overlay.addEventListener("pointerleave", holdEnd);
+    overlay.addEventListener("pointercancel", holdEnd);
+  } else {
+    overlay.addEventListener("mouseenter", holdStart);
+    overlay.addEventListener("mouseleave", holdEnd);
+  }
+}
+
+enableOverlayInteractions();
+
+function showMeaning(card, onDone) {
+  pendingNext = onDone;
+
+  overlayWord.textContent = card.question;
+  overlayText.textContent = card.meaning || card.answer;
+
+  // show example only for weaker words
+  overlayExample.textContent =
+    card.word_status === "new" ||
+    card.word_status === "unknown" ||
+    card.word_status === "recognized"
+      ? card.example || ""
+      : "";
+
+  overlay.classList.add("show");
+
+  clearTimeout(overlayTimeout);
+  overlayTimeout = setTimeout(() => {
+    if (!isHolding) finishOverlay();
+  }, 1000); // sweet spot
+}
+
+function finishOverlay() {
+  clearTimeout(overlayTimeout);
+
+  overlay.classList.remove("show");
+
+  setTimeout(() => {
+    if (pendingNext) pendingNext();
+    pendingNext = null;
+  }, 32);
+}
+
+function getInputOffset() {
+  return LEARNING_RULES.inputTimeOffsets[INPUT_TYPE] ?? 0;
+}
+
+function getStageKey(card) {
+  return `${card.word_status}${card.levelStreak}`;
+}
+
+function getPromotionThreshold() {
+  return LEARNING_RULES.promotion.requiredLevelStreak;
+}
+
+function getDiffArrowPosition(card) {
+  return LEARNING_RULES.diffLevels[card.diff];
+}
+
 function rememberShownWord(card) {
   recentWordIds.push(card.id);
   if (recentWordIds.length > LEARNING_RULES.minWordGap) {
@@ -237,13 +313,12 @@ function shouldCountdown(card) {
 }
 
 function getStarsFill(card) {
-  return LEARNING_RULES.stars[card.word_status + card.levelStreak];
+  return LEARNING_RULES.stars[getStageKey(card)];
 }
 
 function getCountdownDuration(card) {
   return (
-    LEARNING_RULES.stageCountdowns[card.word_status + card.levelStreak] * 1000 +
-    LEARNING_RULES.inputTimeOffsets[INPUT_TYPE]
+    LEARNING_RULES.stageCountdowns[getStageKey(card)] * 1000 + getInputOffset()
   );
 }
 
@@ -313,7 +388,7 @@ function renderQuestionText(card) {
 }
 function updateWordStats(card) {
   levelText.textContent = HEBSTATUS[card.word_status];
-  difArrow.style.left = LEARNING_RULES.diffLevels[card.diff];
+  difArrow.style.left = getDiffArrowPosition(card);
   if (submitted) {
     starsFill.classList.add("animate-fill");
   } else {
@@ -439,6 +514,7 @@ function updateAccuracy(card) {
 function promoteCard(card) {
   const last5recalls = card.recalls.slice(-5);
   let speedAvg = null;
+
   if (last5recalls.length) {
     const sum = last5recalls.reduce((acc, val) => acc + val, 0);
     speedAvg = sum / last5recalls.length;
@@ -459,30 +535,28 @@ function promoteCard(card) {
 
   if (
     card.word_status === STATUS.RECOGNIZED &&
-    card.levelStreak >= LEARNING_RULES.promotion.requiredLevelStreak
+    card.levelStreak >= getPromotionThreshold()
   ) {
-    if (speedAvg < 2000 + LEARNING_RULES.inputTimeOffsets[INPUT_TYPE]) {
+    const recoBoostThreshold =
+      LEARNING_RULES.speedThresholds.recoBoost + getInputOffset();
+
+    const fastEnough = speedAvg !== null && speedAvg < recoBoostThreshold;
+
+    if (fastEnough) {
       card.coolDown *= 2.5;
-      card.word_status = STATUS.KNOWN;
-      card.levelStreak = 0;
-      console.log(
-        speedAvg,
-        "cooldown boost",
-        2000 + LEARNING_RULES.inputTimeOffsets[INPUT_TYPE],
-      );
+      console.log(speedAvg, "cooldown boost", recoBoostThreshold);
     } else {
-      console.log(
-        speedAvg,
-        "no cooldown boost",
-        2000 + LEARNING_RULES.inputTimeOffsets[INPUT_TYPE],
-      );
+      console.log(speedAvg, "no cooldown boost", recoBoostThreshold);
     }
+
+    card.word_status = STATUS.KNOWN;
+    card.levelStreak = 0;
     return;
   }
 
   if (
     card.word_status === STATUS.KNOWN &&
-    card.levelStreak >= LEARNING_RULES.promotion.requiredLevelStreak
+    card.levelStreak >= getPromotionThreshold()
   ) {
     card.word_status = STATUS.KNOWWELL;
     card.levelStreak = 0;
@@ -491,7 +565,7 @@ function promoteCard(card) {
 
   if (
     card.word_status === STATUS.KNOWWELL &&
-    card.levelStreak >= LEARNING_RULES.promotion.requiredLevelStreak
+    card.levelStreak >= getPromotionThreshold()
   ) {
     card.word_status = STATUS.STRONG;
     card.levelStreak = 0;
@@ -500,14 +574,15 @@ function promoteCard(card) {
 
   if (
     card.word_status === STATUS.STRONG &&
-    card.levelStreak >= LEARNING_RULES.promotion.requiredLevelStreak
+    card.levelStreak >= getPromotionThreshold()
   ) {
     card.word_status = STATUS.MASTERED;
     card.levelStreak = 0;
     return;
   }
+
   if (card.word_status === STATUS.MASTERED) {
-    if (card.levelStreak >= LEARNING_RULES.promotion.requiredLevelStreak) {
+    if (card.levelStreak >= getPromotionThreshold()) {
       card.levelStreak = 1;
     }
     return;
@@ -658,13 +733,12 @@ function handleCorrectAnswer(card, mode) {
 
   if (questionClock) clearInterval(questionClock);
 
-  setTimeout(() => {
+  showMeaning(card, () => {
     renderTimer();
     feedbackBg.classList.remove("correct_bg");
     feedbackBg.classList.remove("late_bg");
-
     resetState();
-  }, 1000);
+  });
 }
 
 function handleWrongAnswer(card, selected, mode) {
@@ -704,15 +778,14 @@ function applyCooldown(card, isCorrect, mode, timeToAnswer, tries) {
   // card.onCooldown = true;
 
   let cooldown = card.coolDown ?? LEARNING_RULES.cooldown.DEFAULT;
+  console.log("before", cooldown / 1000);
+
+  const inputOffset = getInputOffset();
 
   const speedMult =
-    timeToAnswer <
-    LEARNING_RULES.speedThresholds.fastMs +
-      LEARNING_RULES.inputTimeOffsets[INPUT_TYPE]
+    timeToAnswer < LEARNING_RULES.speedThresholds.fastMs + inputOffset
       ? LEARNING_RULES.cooldown.SPEED_MULTIPLIERS.under2s
-      : timeToAnswer <
-          LEARNING_RULES.speedThresholds.mediumMs +
-            LEARNING_RULES.inputTimeOffsets[INPUT_TYPE]
+      : timeToAnswer < LEARNING_RULES.speedThresholds.mediumMs + inputOffset
         ? LEARNING_RULES.cooldown.SPEED_MULTIPLIERS.under4s
         : LEARNING_RULES.cooldown.SPEED_MULTIPLIERS.normal;
 
@@ -733,7 +806,7 @@ function applyCooldown(card, isCorrect, mode, timeToAnswer, tries) {
     Math.min(LEARNING_RULES.cooldown.MAX, cooldown),
   );
   const cooldownInSec = cooldown / 1000;
-  console.log(cooldownInSec);
+  console.log("after", cooldownInSec);
   card.coolDown = cooldown;
   card.cooldownUntil = Date.now() + cooldown;
   saveProgress();
@@ -745,7 +818,7 @@ function calcScore(correctAns, mode, duration, card) {
     qScore = 0;
   } else {
     const numOptions = list.children.length;
-    const seconds = (duration + (INPUT_TIME_OFFSETS[INPUT_TYPE] ?? 0)) / 1000;
+    const seconds = (duration + getInputOffset()) / 1000;
     // Base difficulty
     let correctBase =
       mode === "know"
@@ -771,7 +844,6 @@ function calcScore(correctAns, mode, duration, card) {
 }
 
 function updateFeedbackGrid(answerCategory) {
-  console.log(answerCategory);
   let classToAdd;
   if (answerCategory === "correct") {
     classToAdd = "correct_cube";
@@ -872,20 +944,6 @@ function onSubmit(e) {
   }
 }
 
-// function startQuestionTimer() {
-//   let thisQuestionSeconds = 0;
-//   questionStartTime = performance.now();
-//   function tick() {
-//     thisQuestionSeconds += 1;
-//     const questionSeconds = String(thisQuestionSeconds % 60).padStart(2, 0);
-//     const questionMinutes = String(
-//       Math.floor(thisQuestionSeconds / 60),
-//     ).padStart(2, 0);
-//     questionTimer.textContent = `${questionMinutes}:${questionSeconds}`;
-//   }
-//   questionClock = setInterval(tick, 1000);
-// }
-
 function startQuestionTimer() {
   questionStartTime = performance.now();
 
@@ -927,28 +985,6 @@ function renderStats() {
 function renderTimer(time = "00:00") {
   questionTimer.textContent = time;
 }
-
-// function startCountDown(card) {
-//   countdownCon.style.display = "block";
-//   countdown.style.width = "100%";
-
-//   let width = 100;
-//   if (countdownInterval) {
-//     clearInterval(countdownInterval);
-//   }
-
-//   const intervalMs = getCountdownDuration(card);
-
-//   countdownInterval = setInterval(() => {
-//     width -= 0.25;
-//     countdown.style.width = `${width}%`;
-
-//     if (width <= 0 || submitted) {
-//       clearInterval(countdownInterval);
-//       timeOut = true;
-//     }
-//   }, intervalMs);
-// }
 
 function startCountDown(card) {
   countdownCon.style.display = "block";
@@ -1018,7 +1054,7 @@ function resetState() {
 function blindRecall(card) {
   const totalCountdownMs = getCountdownDuration(card);
 
-  const inputOffset = LEARNING_RULES.inputTimeOffsets[INPUT_TYPE] ?? 0;
+  const inputOffset = getInputOffset();
   const revealBeforeEnd =
     card.word_status === "strong" ? 2000 + inputOffset : 1500 + inputOffset;
 

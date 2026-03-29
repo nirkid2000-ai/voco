@@ -7,18 +7,18 @@ export const LEARNING_RULES = {
   },
 
   cooldown: {
-    DEFAULT: 20 * 1000,
+    DEFAULT: 30 * 1000,
     MIN: 1 * 1000,
     MAX: 60 * 1000 * 20,
 
     SPEED_MULTIPLIERS: {
-      under2s: 1.5,
-      under4s: 1.3,
+      under2s: 1.6,
+      under4s: 1.5,
       normal: 1,
     },
 
     CORRECT_MULTIPLIERS: {
-      know: 1.4,
+      know: 1.5,
       guess: 1,
     },
 
@@ -32,6 +32,7 @@ export const LEARNING_RULES = {
   speedThresholds: {
     fastMs: 2000,
     mediumMs: 4000,
+    recoBoost: 2000,
   },
 
   promotion: {
