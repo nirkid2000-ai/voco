@@ -9,7 +9,7 @@ const list = document.querySelector(".wordlist");
 const submitMainBtn = document.querySelector(".main_ans");
 const resetbtn = document.querySelector(".reset");
 const knowOrGuess = document.querySelector(".knoworguess");
-const feedback = document.querySelector(".feedback");
+const feedback = document.querySelector(".line_1");
 const scoreStat = document.querySelector(".score_stat");
 const streakStat = document.querySelector(".streak_stat");
 // const questionTimer = document.querySelector(".q_timer");
@@ -34,6 +34,7 @@ const overlayTime = document.querySelector(".time_to_answer");
 const overlayAvg = document.querySelector(".avg_answer");
 const overlayCooldown = document.querySelector(".next_cooldown");
 const lastRecalls = document.querySelector(".last_recalls");
+const bubble = document.querySelector(".bubble_wrap");
 
 const STORAGE_KEY = "vocab-app-progress-v1";
 
@@ -534,18 +535,7 @@ function updateAccuracy(card) {
   card.accuracy = card.engaged > 0 ? card.rightAnswers / card.engaged : 0;
 }
 
-function promoteCard(card) {
-  const last5recalls = card.recalls.slice(-5);
-  let speedAvg = null;
-
-  if (last5recalls.length) {
-    const sum = last5recalls.reduce((sum, obj) => {
-      return sum + Object.values(obj)[0];
-    }, 0);
-    speedAvg = sum / last5recalls.length;
-    console.log(speedAvg);
-  }
-
+function promoteCard(card, speedAvg) {
   if (card.word_status === STATUS.NEW) {
     card.word_status = STATUS.RECOGNIZED;
     card.levelStreak = 0;
@@ -673,14 +663,14 @@ function applyCorrectScore() {
   if (globalStreak === 100) globalScore *= 3;
 }
 
-function handleFirstTryCorrect(card, mode) {
+function handleFirstTryCorrect(card, mode, speedAvg) {
   if (card.word_status === "mastered" && timeOut) {
     card.levelStreak = 0;
   }
 
   if (mode === "know" && !timeOut) {
     card.levelStreak += 1;
-    promoteCard(card);
+    promoteCard(card, speedAvg);
   } else {
     correctGuesses += 1;
     totalGuesses += 1;
@@ -728,27 +718,32 @@ function handleFirstTryWrong(card, mode) {
   saveProgress();
 }
 
+function showMsg(text) {
+  bubble.classList.remove("invisible");
+  feedback.textContent = text;
+}
+
 function handleCorrectAnswer(card, mode, speedAvg) {
   if (firstTry) {
     if (mode === "know") {
       if (timeOut) {
-        feedback.textContent = "תשובה נכונה אבל מאוחר מדי";
+        showMsg("תשובה נכונה אבל מאוחר מדי");
         feedbackBg.classList.add("late_bg");
       } else {
-        feedback.textContent = "כל הכבוד! תשובה נכונה";
+        showMsg("כל הכבוד! תשובה נכונה");
         feedbackBg.classList.add("correct_bg");
       }
     } else {
-      feedback.textContent = " ניחוש מוצלח";
+      showMsg("ניחוש מוצלח");
       feedbackBg.classList.add("correct_bg");
     }
   } else {
-    feedback.textContent = "הפעם צדקת";
+    showMsg("הפעם הצלחת");
     feedbackBg.classList.add("late_bg");
   }
 
   if (firstTry) {
-    handleFirstTryCorrect(card, mode);
+    handleFirstTryCorrect(card, mode, speedAvg);
   }
 
   applyCorrectScore();
@@ -759,6 +754,7 @@ function handleCorrectAnswer(card, mode, speedAvg) {
 
   showMeaning(card, speedAvg, () => {
     // renderTimer();
+    bubble.classList.add("invisible");
     feedbackBg.classList.remove("correct_bg");
     feedbackBg.classList.remove("late_bg");
     resetState();
@@ -789,9 +785,11 @@ function handleWrongAnswer(card, selected, mode) {
   knowOrGuess.classList.add("hidden");
   submitMainBtn.classList.remove("hidden");
 
-  feedback.textContent = `${getTriesMessage(currentTries)} נסה שוב`;
+  showMsg(`${getTriesMessage(currentTries)} נסה שוב`);
 
   setTimeout(() => {
+    bubble.classList.add("invisible");
+
     feedbackBg.classList.remove("wrong_bg");
     feedback.textContent = "";
   }, 1000);
@@ -957,11 +955,15 @@ function onSubmit(e) {
   let speedAvg = null;
 
   if (last5recalls.length) {
-    const sum = last5recalls.reduce((sum, obj) => {
-      return sum + Object.values(obj)[0];
-    }, 0);
-    speedAvg = sum / last5recalls.length;
-    console.log(speedAvg);
+    if (last5recalls.length === 1) {
+      speedAvg = Object.values(last5recalls[0]);
+    } else {
+      const sum = last5recalls.reduce((sum, obj) => {
+        return sum + Object.values(obj)[0];
+      }, 0);
+      speedAvg = sum / last5recalls.length;
+      console.log(speedAvg);
+    }
   }
 
   console.log(answerCategory);
@@ -1147,6 +1149,7 @@ function startApp() {
   sessionTimer.textContent = "00:00";
   currentSession = new Map();
   currentSessionArr = [];
+  feedGrid.textContent = "";
   loadProgress();
   resetState();
   renderStats();
@@ -1167,3 +1170,55 @@ function removeWord() {
 }
 removeWordBtn.addEventListener("click", removeWord);
 startBtn.addEventListener("click", startApp);
+
+const openEyes = [
+  document.getElementById("eyeL"),
+  document.getElementById("eyeR"),
+  document.getElementById("pupilL"),
+  document.getElementById("pupilR"),
+];
+
+const closedEyes = [
+  document.getElementById("eyeClosedL"),
+  document.getElementById("eyeClosedR"),
+];
+
+function show(elements) {
+  elements.forEach((el) => {
+    if (el) el.style.display = "block";
+  });
+}
+
+function hide(elements) {
+  elements.forEach((el) => {
+    if (el) el.style.display = "none";
+  });
+}
+
+function blink() {
+  hide(openEyes);
+  show(closedEyes);
+
+  setTimeout(() => {
+    hide(closedEyes);
+    show(openEyes);
+
+    const next = 2000 + Math.random() * 3000;
+    setTimeout(blink, next);
+  }, 120);
+}
+
+setTimeout(blink, 1500);
+
+const pupilL = document.getElementById("pupilL");
+const pupilR = document.getElementById("pupilR");
+
+let lookDir = 1;
+
+setInterval(() => {
+  lookDir *= -1;
+  const x = lookDir * 4;
+
+  pupilL.style.transform = `translateX(${x}px)`;
+  pupilR.style.transform = `translateX(${x}px)`;
+}, 1800);

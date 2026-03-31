@@ -97,14 +97,6 @@
   fill: gold;
 }
 
-.feedback {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  min-height: 1.5em;
-}
-
 .main_ui {
   display: flex;
   flex-direction: column;
@@ -156,6 +148,7 @@
 }
 
 .btns {
+  position: relative;
   width: 100%;
   margin-bottom: 15px;
   margin-top: 5px;
@@ -283,7 +276,7 @@ input[type="radio"] {
   z-index: 2;
   background-color: rgb(255, 221, 0);
   border-radius: 5px;
-  height: 20px;
+  height: 15px;
   width: 100%;
 }
 
@@ -292,15 +285,15 @@ input[type="radio"] {
   z-index: 1;
   background-color: rgb(170, 170, 170);
   border-radius: 5px;
-  height: 20px;
+  height: 15px;
   width: 100%;
 }
 
 .countdown_con {
-  display: none;
+  /* display: none; */
   position: relative;
   border-radius: 5px;
-  height: 20px;
+  height: 15px;
   width: 100%;
 }
 
@@ -500,4 +493,104 @@ input[type="radio"] {
 
 .card_stats {
   font-size: 16px;
+}
+
+.crow_wrap {
+  position: absolute;
+  z-index: 2;
+  top: -72px;
+  left: -5px;
+  display: block;
+  width: 60px;
+}
+
+#eyeClosedL,
+#eyeClosedR,
+#eyeBlinkL,
+#eyeBlinkR,
+#eyeHappyL,
+#eyeHappyR {
+  display: none;
+}
+
+#pupilL,
+#pupilR {
+  transition: transform 0.6s ease;
+}
+
+#wingL,
+#wingR,
+#backwingR,
+#backwingL {
+  transition: transform 180ms ease;
+  transform-box: fill-box;
+}
+
+#wingL,
+#backwingL {
+  transform-origin: 85% 20%;
+}
+
+#wingR,
+#backwingR {
+  transform-origin: 15% 20%;
+}
+
+.crow_wrap:hover #wingL {
+  transform: rotate(40deg);
+}
+.crow_wrap:hover #backwingL {
+  transform: rotate(45deg);
+}
+
+.crow_wrap:hover #wingR {
+  transform: rotate(-40deg);
+}
+.crow_wrap:hover #backwingR {
+  transform: rotate(-45deg);
+}
+
+.text_bubble {
+  align-self: flex-start;
+  width: 81%;
+  display: flex;
+  /* min-height: 1.5em; */
+  align-items: center;
+}
+
+.bubble_wrap {
+  width: 100%;
+
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.bubble {
+  display: block;
+  width: 100%;
+}
+
+.text_wrap {
+  position: absolute;
+  width: 90%;
+  right: 5px;
+  display: flex;
+  padding-bottom: 5px;
+  align-items: center;
+  justify-content: center;
+}
+
+.feedback_text {
+  font-size: 18px;
+  /* width: 90%; */
+  color: white;
+}
+
+.feedback_text span {
+  display: block;
+}
+
+.invisible {
+  opacity: 0;
 }
