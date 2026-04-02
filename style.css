@@ -80,6 +80,10 @@
   left: 50%;
 }
 
+.mastery {
+  z-index: 10;
+}
+
 .star-meter {
   width: 90px;
 }
@@ -384,20 +388,23 @@ input[type="radio"] {
 96 - 6px
 4px */
 
-.correct_answer {
+.correct,
+.slowCorrect,
+.fastCorrect {
   background-color: rgb(0, 192, 51);
 }
 
-.guess {
+.correctGuess {
   background-color: rgb(139, 246, 168);
 }
 
-.late_correct {
+.lateCorrect {
   background-color: rgb(255, 196, 0);
 }
 
-.wrong_answer,
-.recovery_correct {
+.wrongAnswer,
+.wrongGuess,
+.strongWrong {
   background-color: rgb(192, 42, 0);
 }
 
@@ -445,7 +452,7 @@ input[type="radio"] {
   transition:
     opacity 0.14s ease,
     transform 0.14s ease;
-  z-index: 10;
+  z-index: 5;
 }
 
 .meaning_overlay.show {
@@ -478,14 +485,14 @@ input[type="radio"] {
   font-size: 16px;
 }
 
-.last_recalls {
+.last_answers {
   margin: 15px 0px;
   display: flex;
   flex-direction: row-reverse;
   gap: 5px;
 }
 
-.recalls_circle {
+.answers_circle {
   width: 18px;
   height: 18px;
   border-radius: 20px;

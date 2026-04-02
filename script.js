@@ -33,7 +33,7 @@ const overlayExample = document.querySelector(".meaning_example");
 const overlayTime = document.querySelector(".time_to_answer");
 const overlayAvg = document.querySelector(".avg_answer");
 const overlayCooldown = document.querySelector(".next_cooldown");
-const lastRecalls = document.querySelector(".last_recalls");
+const lastAnswers = document.querySelector(".last_answers");
 const bubble = document.querySelector(".bubble_wrap");
 
 const STORAGE_KEY = "vocab-app-progress-v1";
@@ -60,7 +60,8 @@ function createDefaultProgress() {
     accuracy: 0,
     wrongTries: 0,
     recalls: [],
-    coolDown: LEARNING_RULES.cooldown.DEFAULT,
+    firstAnswersHistory: [],
+    coolDown: LEARNING_RULES.COOLDOWNS.DEFAULT,
     inCycle: false,
     cooldownUntil: null,
     isRemoved: false,
@@ -94,6 +95,7 @@ function saveProgress() {
         accuracy: card.accuracy,
         wrongTries: card.wrongTries,
         recalls: card.recalls,
+        firstAnswersHistory: card.firstAnswersHistory,
         coolDown: card.coolDown,
         inCycle: card.inCycle,
         cooldownUntil: card.cooldownUntil,
@@ -187,6 +189,20 @@ const HEBSTATUS = {
   mastered: "מילה שאתה שולט בה",
 };
 
+const ANSWERS_CATEGORIES = {
+  FAST_CORRECT: "fastCorrect",
+  FIRST_CORRECT: "correct",
+  SLOW_CORRECT: "slowCorrect",
+  LATE_CORRECT: "lateCorrect",
+  RECOVERY_CORRECT: "recoveryCorrect",
+  CORRECT_GUESS: "correctGuess",
+  WRONG: {
+    WRONG_GUESS: "wrongGuess",
+    WRONG_ANSWER: "wrongAnswer",
+    STRONG_WRONG: "strongWrong",
+  },
+};
+
 let chosenCard;
 let firstTry = true;
 let currentTries = 0;
@@ -258,12 +274,13 @@ function msToSeconds(milliseconds) {
 
 function showMeaning(card, speedAvg, onDone) {
   pendingNext = onDone;
-  show_answers_circles(card);
+  showAnswersCircles(card);
   overlayWord.textContent = card.question;
   overlayText.textContent = card.meaning || card.answer;
   overlayTime.textContent = `זמן מענה: ${msToSeconds(
-    performance.now() - questionStartTime,
+    Object.values(card.recalls.at(-1))[0],
   )} שניות`;
+  console.log(Object.values(card.recalls.at(-1))[0]);
   overlayAvg.textContent = `זמן מענה ממוצע: ${msToSeconds(speedAvg)} שניות`;
 
   overlayCooldown.textContent = `זמן קולדאון: ${msToTime(card.coolDown)}`;
@@ -337,6 +354,7 @@ function shouldCountdown(card) {
 }
 
 function getStarsFill(card) {
+  console.log(getStageKey(card));
   return LEARNING_RULES.stars[getStageKey(card)];
 }
 
@@ -552,17 +570,17 @@ function promoteCard(card, speedAvg) {
     card.word_status === STATUS.RECOGNIZED &&
     card.levelStreak >= getPromotionThreshold()
   ) {
-    const recoBoostThreshold =
-      LEARNING_RULES.speedThresholds.recoBoost + getInputOffset();
+    // const recoBoostThreshold =
+    //   LEARNING_RULES.speedThresholds.recoBoost + getInputOffset();
 
-    const fastEnough = speedAvg !== null && speedAvg < recoBoostThreshold;
+    // const fastEnough = speedAvg !== null && speedAvg < recoBoostThreshold;
 
-    if (fastEnough) {
-      card.coolDown *= 2.5;
-      console.log(speedAvg, "cooldown boost", recoBoostThreshold);
-    } else {
-      console.log(speedAvg, "no cooldown boost", recoBoostThreshold);
-    }
+    // if (fastEnough) {
+    //   card.coolDown *= 2.5;
+    //   console.log(speedAvg, "cooldown boost", recoBoostThreshold);
+    // } else {
+    //   console.log(speedAvg, "no cooldown boost", recoBoostThreshold);
+    // }
 
     card.word_status = STATUS.KNOWN;
     card.levelStreak = 0;
@@ -643,7 +661,7 @@ function getTriesMessage(tries) {
   if (tries === 1) return "טעות ראשונה";
   if (tries === 2) return "טעות שנייה";
   if (tries === 3) return "טעות שלישית";
-  if (tries === 4) return "טעות רביעית";
+  // if (tries === 4) return "טעות רביעית";
   return `טעות מספר ${tries}`;
 }
 
@@ -663,28 +681,30 @@ function applyCorrectScore() {
   if (globalStreak === 100) globalScore *= 3;
 }
 
-function handleFirstTryCorrect(card, mode, speedAvg) {
+function handleFirstTryCorrect(card, category, speedAvg) {
   if (card.word_status === "mastered" && timeOut) {
     card.levelStreak = 0;
   }
 
-  if (mode === "know" && !timeOut) {
+  if (
+    category === ANSWERS_CATEGORIES.FIRST_CORRECT ||
+    category === ANSWERS_CATEGORIES.FAST_CORRECT ||
+    category === ANSWERS_CATEGORIES.SLOW_CORRECT
+  ) {
     card.levelStreak += 1;
     promoteCard(card, speedAvg);
-  } else {
+  } else if (category === ANSWERS_CATEGORIES.CORRECT_GUESS) {
     correctGuesses += 1;
     totalGuesses += 1;
   }
 
   card.rightAnswers += 1;
   card.wordStreak += 1;
-
   globalStreak += 1;
   totalCorrect += 1;
-  totalQs += 1;
+  updateAccuracy(card);
 
   updateWordStats(card);
-  updateAccuracy(card);
   currentSession.set(card.id, card);
   currentSessionArr.push(card);
 
@@ -693,8 +713,8 @@ function handleFirstTryCorrect(card, mode, speedAvg) {
   saveProgress();
 }
 
-function handleFirstTryWrong(card, mode) {
-  if (mode === "guess") {
+function handleFirstTryWrong(card, category) {
+  if (category === ANSWERS_CATEGORIES.WRONG.WRONG_GUESS) {
     totalGuesses += 1;
   }
   firstTry = false;
@@ -705,9 +725,8 @@ function handleFirstTryWrong(card, mode) {
   countdown.style.width = `0%`;
   // countdownCon.style.display = "none";
 
-  totalQs += 1;
-
   updateAccuracy(card);
+
   demoteCard(card);
   updateWordStats(card);
   currentSession.set(card.id, card);
@@ -718,32 +737,47 @@ function handleFirstTryWrong(card, mode) {
   saveProgress();
 }
 
+function getMessage(category, currentTries) {
+  const message = Messages[category];
+  return typeof message === "function" ? message(currentTries) : message;
+}
+
 function showMsg(text) {
   bubble.classList.remove("invisible");
   feedback.textContent = text;
 }
 
-function handleCorrectAnswer(card, mode, speedAvg) {
-  if (firstTry) {
-    if (mode === "know") {
-      if (timeOut) {
-        showMsg("תשובה נכונה אבל מאוחר מדי");
-        feedbackBg.classList.add("late_bg");
-      } else {
-        showMsg("כל הכבוד! תשובה נכונה");
-        feedbackBg.classList.add("correct_bg");
-      }
-    } else {
-      showMsg("ניחוש מוצלח");
-      feedbackBg.classList.add("correct_bg");
-    }
-  } else {
-    showMsg("הפעם הצלחת");
+const Messages = {
+  [ANSWERS_CATEGORIES.FAST_CORRECT]: "וואו! זה היה מהיר!",
+  [ANSWERS_CATEGORIES.LATE_CORRECT]: "תשובה נכונה אבל מאוחר מדי",
+  [ANSWERS_CATEGORIES.SLOW_CORRECT]: "תשובה נכונה אבל טיפה לאט ",
+  [ANSWERS_CATEGORIES.FIRST_CORRECT]: "כל הכבוד! תשובה נכונה",
+  [ANSWERS_CATEGORIES.CORRECT_GUESS]: "יפה. ניחוש מוצלח",
+  [ANSWERS_CATEGORIES.RECOVERY_CORRECT]: "הפעם הצלחת",
+  [ANSWERS_CATEGORIES.WRONG.STRONG_WRONG]: (currentTries) =>
+    `${getTriesMessage(currentTries)} נסה שוב`,
+  [ANSWERS_CATEGORIES.WRONG.WRONG_ANSWER]: (currentTries) =>
+    `${getTriesMessage(currentTries)} נסה שוב`,
+  [ANSWERS_CATEGORIES.WRONG.WRONG_GUESS]: "ניחוש לא מוצלח. נסו שוב...",
+};
+
+function handleCorrectAnswer(card, category, speedAvg) {
+  if (category === ANSWERS_CATEGORIES.LATE_CORRECT) {
+    feedbackBg.classList.add("late_bg");
+  } else if (
+    category === ANSWERS_CATEGORIES.FIRST_CORRECT ||
+    category === ANSWERS_CATEGORIES.FAST_CORRECT ||
+    category === ANSWERS_CATEGORIES.SLOW_CORRECT
+  ) {
+    feedbackBg.classList.add("correct_bg");
+  } else if (category === ANSWERS_CATEGORIES.CORRECT_GUESS) {
+    feedbackBg.classList.add("correct_bg");
+  } else if (category === ANSWERS_CATEGORIES.RECOVERY_CORRECT) {
     feedbackBg.classList.add("late_bg");
   }
 
   if (firstTry) {
-    handleFirstTryCorrect(card, mode, speedAvg);
+    handleFirstTryCorrect(card, category, speedAvg);
   }
 
   applyCorrectScore();
@@ -761,23 +795,25 @@ function handleCorrectAnswer(card, mode, speedAvg) {
   });
 }
 
-function handleWrongAnswer(card, selected, mode) {
-  const label = selected.closest("li");
+function dimAnswer(selection) {
+  const label = selection.closest("li");
 
   feedbackBg.classList.add("wrong_bg");
   submitMainBtn.classList.add("inactive");
 
   if (label) label.classList.add("wrong");
 
-  selected.disabled = true;
-  selected.checked = false;
+  selection.disabled = true;
+  selection.checked = false;
+}
 
+function handleWrongAnswer(card, category) {
   globalStreak = 0;
   card.wordStreak = 0;
   renderStats();
 
   if (firstTry) {
-    handleFirstTryWrong(card, mode);
+    handleFirstTryWrong(card, category);
   } else {
     card.wrongTries += 1;
     saveProgress();
@@ -785,50 +821,74 @@ function handleWrongAnswer(card, selected, mode) {
   knowOrGuess.classList.add("hidden");
   submitMainBtn.classList.remove("hidden");
 
-  showMsg(`${getTriesMessage(currentTries)} נסה שוב`);
-
   setTimeout(() => {
     bubble.classList.add("invisible");
-
     feedbackBg.classList.remove("wrong_bg");
     feedback.textContent = "";
   }, 1000);
 }
 
-function applyCooldown(card, isCorrect, mode, timeToAnswer, tries) {
-  console.log("cooldown:");
-  // card.onCooldown = true;
-
-  let cooldown = card.coolDown ?? LEARNING_RULES.cooldown.DEFAULT;
-  console.log("before", cooldown / 1000);
-
-  const inputOffset = getInputOffset();
-
-  const speedMult =
-    timeToAnswer < LEARNING_RULES.speedThresholds.fastMs + inputOffset
-      ? LEARNING_RULES.cooldown.SPEED_MULTIPLIERS.under2s
-      : timeToAnswer < LEARNING_RULES.speedThresholds.mediumMs + inputOffset
-        ? LEARNING_RULES.cooldown.SPEED_MULTIPLIERS.under4s
-        : LEARNING_RULES.cooldown.SPEED_MULTIPLIERS.normal;
-
-  if (isCorrect && mode === "know") {
-    cooldown *= LEARNING_RULES.cooldown.CORRECT_MULTIPLIERS.know * speedMult;
-  } else if (isCorrect && mode === "guess") {
-    cooldown *= LEARNING_RULES.cooldown.CORRECT_MULTIPLIERS.guess;
-  } else if (!isCorrect && mode === "guess") {
-    cooldown *= LEARNING_RULES.cooldown.WRONG_MULTIPLIERS.guess;
-  } else if (!isCorrect && mode === "know") {
-    cooldown *= LEARNING_RULES.cooldown.WRONG_MULTIPLIERS.know;
-  } else if (!isCorrect && mode === "main" && tries > 2) {
-    cooldown *= LEARNING_RULES.cooldown.WRONG_MULTIPLIERS.multFails;
+function countFastStreak(card) {
+  let streakCount = 0;
+  for (
+    let i = card.firstAnswersHistory.length - 1;
+    i >= 0 && card.firstAnswersHistory[i] === ANSWERS_CATEGORIES.FAST_CORRECT;
+    i--
+  ) {
+    streakCount++;
   }
+  return streakCount;
+}
+
+function calcFastStreakMult(fastSreakCount, boostThreshold) {
+  const mult = 1.5;
+  if (fastSreakCount < boostThreshold) return 1;
+  return fastSreakCount * mult;
+}
+
+function applyCooldown(card, category, fastStreakCount) {
+  let cooldown = card.coolDown ?? LEARNING_RULES.COOLDOWNS.DEFAULT;
+  console.log("cooldown before", cooldown / 1000);
+
+  // const inputOffset = getInputOffset();
+
+  // const speedMult =
+  //   timeToAnswer < LEARNING_RULES.speedThresholds.fastMs + inputOffset
+  //     ? LEARNING_RULES.cooldown.SPEED_MULTIPLIERS.under2s
+  //     : timeToAnswer < LEARNING_RULES.speedThresholds.mediumMs + inputOffset
+  //       ? LEARNING_RULES.cooldown.SPEED_MULTIPLIERS.under4s
+  //       : LEARNING_RULES.cooldown.SPEED_MULTIPLIERS.normal;
+
+  const cooldownMultiplier = LEARNING_RULES.COOLDOWNS.MULTIPLIERS[category];
+
+  const streakCooldownMult = calcFastStreakMult(fastStreakCount, 3);
+
+  cooldown *= cooldownMultiplier * streakCooldownMult;
+  // if (category === ANSWERS_CATEGORIES.FIRST_CORRECT) {
+  //   cooldown *= LEARNING_RULES.cooldown.CORRECT_MULTIPLIERS.know * speedMult;
+  // } else if (category === ANSWERS_CATEGORIES.CORRECT_GUESS) {
+  //   cooldown *= LEARNING_RULES.cooldown.CORRECT_MULTIPLIERS.guess;
+  // } else if (category === ANSWERS_CATEGORIES.WRONG_GUESS) {
+  //   cooldown *= LEARNING_RULES.cooldown.WRONG_MULTIPLIERS.guess;
+  // } else if (category === ANSWERS_CATEGORIES.WRONG.STRONG_WRONG) {
+  //   cooldown *= LEARNING_RULES.cooldown.WRONG_MULTIPLIERS.know;
+  // } else if (category === ANSWERS_CATEGORIES.WRONG.WRONG_ANSWER && tries > 2) {
+  //   cooldown *= LEARNING_RULES.cooldown.WRONG_MULTIPLIERS.multFails;
+  // }
 
   cooldown = Math.max(
-    LEARNING_RULES.cooldown.MIN,
-    Math.min(LEARNING_RULES.cooldown.MAX, cooldown),
+    LEARNING_RULES.COOLDOWNS.MIN,
+    Math.min(LEARNING_RULES.COOLDOWNS.MAX, cooldown),
   );
   const cooldownInSec = cooldown / 1000;
-  console.log("after", cooldownInSec);
+  console.log(
+    "mult",
+    cooldownMultiplier,
+    "streakMult",
+    streakCooldownMult,
+    "after",
+    cooldownInSec,
+  );
   card.coolDown = cooldown;
   card.cooldownUntil = Date.now() + cooldown;
   saveProgress();
@@ -899,24 +959,71 @@ function updateFeedbackGrid(answerCategory) {
   }
 }
 
-function show_answers_circles(card) {
-  let circleClass;
-  lastRecalls.textContent = "";
-  for (const circle of card.recalls) {
+function showAnswersCircles(card) {
+  lastAnswers.textContent = "";
+  for (const circle of card.firstAnswersHistory) {
     const circle_fb = document.createElement("div");
-    circle_fb.classList.add("recalls_circle");
-    circle_fb.classList.add(Object.keys(circle)[0]);
-    lastRecalls.append(circle_fb);
+    circle_fb.classList.add("answers_circle");
+    circle_fb.classList.add(circle);
+    lastAnswers.append(circle_fb);
   }
 }
 
-function evaluateAnswer(correctAns, mode) {
-  console.log(correctAns, mode);
-  if (correctAns && !timeOut && mode === "know") return "correct_answer";
-  else if (correctAns && mode === "main") return "recovery_correct";
-  else if (correctAns && mode === "guess") return "guess";
-  else if (correctAns && timeOut && mode === "know") return "late_correct";
-  else if (!correctAns) return "wrong_answer";
+function evaluateAnswer(correctAns, mode, duration) {
+  console.log(correctAns, mode, duration, timeOut);
+  if (
+    correctAns &&
+    !timeOut &&
+    mode === "know" &&
+    duration < LEARNING_RULES.speedThresholds.QUICK_ANSWER + getInputOffset()
+  )
+    return ANSWERS_CATEGORIES.FAST_CORRECT;
+  else if (
+    correctAns &&
+    !timeOut &&
+    mode === "know" &&
+    duration > LEARNING_RULES.speedThresholds.SLOW_ANSWER + getInputOffset()
+  )
+    return ANSWERS_CATEGORIES.SLOW_CORRECT;
+  else if (
+    correctAns &&
+    !timeOut &&
+    mode === "know" &&
+    duration >= LEARNING_RULES.speedThresholds.QUICK_ANSWER + getInputOffset()
+  )
+    return ANSWERS_CATEGORIES.FIRST_CORRECT;
+  else if (correctAns && mode === "main")
+    return ANSWERS_CATEGORIES.RECOVERY_CORRECT;
+  else if (correctAns && mode === "guess")
+    return ANSWERS_CATEGORIES.CORRECT_GUESS;
+  else if (correctAns && timeOut && mode === "know")
+    return ANSWERS_CATEGORIES.LATE_CORRECT;
+  else if (!correctAns && mode === "guess")
+    return ANSWERS_CATEGORIES.WRONG.WRONG_GUESS;
+  else if (!correctAns && mode === "know")
+    return ANSWERS_CATEGORIES.WRONG.STRONG_WRONG;
+  else if (!correctAns && mode === "main")
+    return ANSWERS_CATEGORIES.WRONG.WRONG_ANSWER;
+}
+
+function getAvgSpeedFromRecalls(card, numOfRecalls) {
+  const lastXrecalls = card.recalls.slice(-numOfRecalls);
+  console.log(lastXrecalls);
+  let speedAvg = null;
+
+  if (lastXrecalls.length) {
+    if (lastXrecalls.length === 1) {
+      speedAvg = Object.values(lastXrecalls[0]);
+      console.log(speedAvg[0]);
+      return speedAvg[0];
+    } else {
+      const sum = lastXrecalls.reduce((sum, obj) => {
+        return sum + Object.values(obj)[0];
+      }, 0);
+      speedAvg = sum / lastXrecalls.length;
+    }
+  }
+  return speedAvg;
 }
 
 function onSubmit(e) {
@@ -938,7 +1045,7 @@ function onSubmit(e) {
   }
   const key = roundFlip ? "question" : "answer";
   const correctAns = selected.value === card[key];
-  const duration = performance.now() - questionStartTime;
+  const duration = Math.min(performance.now() - questionStartTime, 20000);
 
   if (countdownRound && firstTry) {
     const totalMs = getCountdownDuration(card);
@@ -947,45 +1054,40 @@ function onSubmit(e) {
     countdown.style.width = `${width}%`;
   }
 
-  const answerCategory = evaluateAnswer(correctAns, mode);
-  if (answerCategory !== "wrong_answer")
+  const answerCategory = evaluateAnswer(correctAns, mode, duration);
+  if (!Object.values(ANSWERS_CATEGORIES.WRONG).includes(answerCategory)) {
+    console.log("not wrong, pushed to recalls");
     chosenCard.recalls.push({ [answerCategory]: Math.floor(duration) });
-
-  const last5recalls = card.recalls.slice(-5);
-  let speedAvg = null;
-
-  if (last5recalls.length) {
-    if (last5recalls.length === 1) {
-      speedAvg = Object.values(last5recalls[0]);
-    } else {
-      const sum = last5recalls.reduce((sum, obj) => {
-        return sum + Object.values(obj)[0];
-      }, 0);
-      speedAvg = sum / last5recalls.length;
-      console.log(speedAvg);
-    }
   }
+
+  const speedAvg = getAvgSpeedFromRecalls(card, 5);
+  const fastStreakCount = countFastStreak(card);
 
   console.log(answerCategory);
   submitted = true;
   // button.disabled = true;
   if (firstTry) {
     card.engaged += 1;
+    totalQs += 1;
     calcScore(correctAns, mode, duration, card);
     updateFeedbackGrid(answerCategory);
+    card.firstAnswersHistory.push(answerCategory);
   }
   currentTries++;
 
-  applyCooldown(card, correctAns, mode, duration, currentTries);
+  applyCooldown(card, answerCategory, fastStreakCount);
+
+  showMsg(getMessage(answerCategory, currentTries));
 
   if (firstTry && countdownRound) {
     timeOut = duration >= getCountdownDuration(card);
   }
 
   if (correctAns) {
-    handleCorrectAnswer(card, mode, speedAvg);
+    handleCorrectAnswer(card, answerCategory, speedAvg);
   } else {
-    handleWrongAnswer(card, selected, mode);
+    dimAnswer(selected);
+    handleWrongAnswer(card, answerCategory);
 
     btnDisabled = false;
     document.querySelectorAll(".submit").forEach((btn) => {

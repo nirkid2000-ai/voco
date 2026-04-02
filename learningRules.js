@@ -3,33 +3,53 @@ export const LEARNING_RULES = {
 
   inputTimeOffsets: {
     touch: 0,
-    pointer: 600,
+    pointer: 500,
   },
 
-  cooldown: {
+  // cooldown: {
+  //   DEFAULT: 30 * 1000,
+  //   MIN: 1 * 1000,
+  //   MAX: 60 * 1000 * 20,
+
+  //   SPEED_MULTIPLIERS: {
+  //     under2s: 1.6,
+  //     under4s: 1.5,
+  //     normal: 1,
+  //   },
+
+  //   CORRECT_MULTIPLIERS: {
+  //     know: 1.5,
+  //     guess: 1,
+  //   },
+
+  //   WRONG_MULTIPLIERS: {
+  //     know: 0.6,
+  //     guess: 0.8,
+  //     multFails: 0.9,
+  //   },
+  // },
+
+  COOLDOWNS: {
     DEFAULT: 30 * 1000,
     MIN: 1 * 1000,
     MAX: 60 * 1000 * 20,
 
-    SPEED_MULTIPLIERS: {
-      under2s: 1.6,
-      under4s: 1.5,
-      normal: 1,
-    },
-
-    CORRECT_MULTIPLIERS: {
-      know: 1.5,
-      guess: 1,
-    },
-
-    WRONG_MULTIPLIERS: {
-      know: 0.6,
-      guess: 0.8,
-      multFails: 0.9,
+    MULTIPLIERS: {
+      fastCorrect: 2,
+      correct: 1.5,
+      slowCorrect: 1.3,
+      correctGuess: 1,
+      recoveryCorrect: 1,
+      lateCorrect: 1.2,
+      strongWrong: 0.6,
+      wrongGuess: 0.8,
+      wrongAnswer: 0.98,
     },
   },
 
   speedThresholds: {
+    QUICK_ANSWER: 2500,
+    SLOW_ANSWER: 5000,
     fastMs: 2000,
     mediumMs: 4000,
     recoBoost: 2000,
@@ -40,10 +60,10 @@ export const LEARNING_RULES = {
   },
 
   stageCountdowns: {
-    new0: 30,
-    unknown0: 16,
-    unknown1: 14,
-    recognized0: 12,
+    new0: 15,
+    unknown0: 12,
+    unknown1: 10,
+    recognized0: 10,
     recognized1: 10,
     known0: 8,
     known1: 6,
