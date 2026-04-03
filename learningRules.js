@@ -1,40 +1,16 @@
 export const LEARNING_RULES = {
   minWordGap: 5,
 
-  inputTimeOffsets: {
+  inputOffsets: {
     touch: 0,
     pointer: 500,
   },
 
-  // cooldown: {
-  //   DEFAULT: 30 * 1000,
-  //   MIN: 1 * 1000,
-  //   MAX: 60 * 1000 * 20,
-
-  //   SPEED_MULTIPLIERS: {
-  //     under2s: 1.6,
-  //     under4s: 1.5,
-  //     normal: 1,
-  //   },
-
-  //   CORRECT_MULTIPLIERS: {
-  //     know: 1.5,
-  //     guess: 1,
-  //   },
-
-  //   WRONG_MULTIPLIERS: {
-  //     know: 0.6,
-  //     guess: 0.8,
-  //     multFails: 0.9,
-  //   },
-  // },
-
-  COOLDOWNS: {
-    DEFAULT: 30 * 1000,
-    MIN: 1 * 1000,
-    MAX: 60 * 1000 * 20,
-
-    MULTIPLIERS: {
+  cooldowns: {
+    defaultMs: 30000,
+    minMs: 1000,
+    maxMs: 1200000,
+    multipliers: {
       fastCorrect: 2,
       correct: 1.5,
       slowCorrect: 1.3,
@@ -48,11 +24,8 @@ export const LEARNING_RULES = {
   },
 
   speedThresholds: {
-    QUICK_ANSWER: 2500,
-    SLOW_ANSWER: 5000,
-    fastMs: 2000,
-    mediumMs: 4000,
-    recoBoost: 2000,
+    quickMs: 2500,
+    slowMs: 6000,
   },
 
   promotion: {
@@ -60,15 +33,15 @@ export const LEARNING_RULES = {
   },
 
   stageCountdowns: {
-    new0: 15,
-    unknown0: 12,
-    unknown1: 10,
-    recognized0: 10,
+    new0: 20,
+    unknown0: 15,
+    // unknown1: 10,
+    recognized0: 12,
     recognized1: 10,
     known0: 8,
-    known1: 6,
-    knownWell0: 5,
-    knownWell1: 4,
+    known1: 7,
+    knownWell0: 6,
+    knownWell1: 6,
     strong0: 5,
     strong1: 5,
     mastered0: 4,

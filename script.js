@@ -1,6 +1,12 @@
 "use strict";
-import data from "/en3.js";
+import data from "/en200.js";
 import { LEARNING_RULES } from "/learningRules.js";
+import {
+  getStageKey,
+  shouldFlip,
+  shouldBlind,
+  getStarsFill,
+} from "/learningHelpers.js";
 
 const qText = document.querySelector(".q");
 const levelText = document.querySelector(".word_level");
@@ -61,7 +67,7 @@ function createDefaultProgress() {
     wrongTries: 0,
     recalls: [],
     firstAnswersHistory: [],
-    coolDown: LEARNING_RULES.COOLDOWNS.DEFAULT,
+    coolDown: LEARNING_RULES.cooldowns.defaultMs,
     inCycle: false,
     cooldownUntil: null,
     isRemoved: false,
@@ -230,18 +236,23 @@ let sessionClock;
 let recentWordIds = [];
 
 let overlayTimeout = null;
+let correctFeedbackTimeout = null;
 let isHolding = false;
 let pendingNext = null;
+let overlayMinTimeDone = false;
 
 function holdStart() {
   isHolding = true;
-  clearTimeout(overlayTimeout);
 }
 
 function holdEnd() {
   if (!isHolding) return;
   isHolding = false;
-  finishOverlay();
+
+  // Hover/touch can extend visibility, but never shorten it.
+  if (overlayMinTimeDone) {
+    finishOverlay();
+  }
 }
 
 function enableOverlayInteractions() {
@@ -274,17 +285,17 @@ function msToSeconds(milliseconds) {
 
 function showMeaning(card, speedAvg, onDone) {
   pendingNext = onDone;
+  overlayMinTimeDone = false;
+
   showAnswersCircles(card);
   overlayWord.textContent = card.question;
   overlayText.textContent = card.meaning || card.answer;
   overlayTime.textContent = `זמן מענה: ${msToSeconds(
     Object.values(card.recalls.at(-1))[0],
   )} שניות`;
-  console.log(Object.values(card.recalls.at(-1))[0]);
   overlayAvg.textContent = `זמן מענה ממוצע: ${msToSeconds(speedAvg)} שניות`;
-
   overlayCooldown.textContent = `זמן קולדאון: ${msToTime(card.coolDown)}`;
-  // show example only for weaker words
+
   overlayExample.textContent =
     card.word_status === "new" ||
     card.word_status === "unknown" ||
@@ -296,27 +307,28 @@ function showMeaning(card, speedAvg, onDone) {
 
   clearTimeout(overlayTimeout);
   overlayTimeout = setTimeout(() => {
-    if (!isHolding) finishOverlay();
-  }, 1000); // sweet spot
+    overlayMinTimeDone = true;
+
+    if (!isHolding) {
+      finishOverlay();
+    }
+  }, 1000);
 }
 
 function finishOverlay() {
   clearTimeout(overlayTimeout);
+  overlayTimeout = null;
+  overlayMinTimeDone = false;
+  isHolding = false;
 
   overlay.classList.remove("show");
 
-  setTimeout(() => {
-    if (pendingNext) pendingNext();
-    pendingNext = null;
-  }, 0);
+  if (pendingNext) pendingNext();
+  pendingNext = null;
 }
 
 function getInputOffset() {
-  return LEARNING_RULES.inputTimeOffsets[INPUT_TYPE] ?? 0;
-}
-
-function getStageKey(card) {
-  return `${card.word_status}${card.levelStreak}`;
+  return LEARNING_RULES.inputOffsets[INPUT_TYPE] ?? 0;
 }
 
 function getPromotionThreshold() {
@@ -334,28 +346,9 @@ function rememberShownWord(card) {
   }
 }
 
-function shouldFlip(card) {
-  return (
-    (card.word_status === "strong" || card.word_status === "mastered") &&
-    card.levelStreak === 0
-  );
-}
-
-function shouldBlind(card) {
-  return (
-    card.word_status === "mastered" ||
-    (card.word_status === "strong" && card.levelStreak === 1)
-  );
-}
-
 function shouldCountdown(card) {
   return true;
   // return !["new", "unknown", "recognized"].includes(card.word_status);
-}
-
-function getStarsFill(card) {
-  console.log(getStageKey(card));
-  return LEARNING_RULES.stars[getStageKey(card)];
 }
 
 function getCountdownDuration(card) {
@@ -553,7 +546,7 @@ function updateAccuracy(card) {
   card.accuracy = card.engaged > 0 ? card.rightAnswers / card.engaged : 0;
 }
 
-function promoteCard(card, speedAvg) {
+function promoteCard(card) {
   if (card.word_status === STATUS.NEW) {
     card.word_status = STATUS.RECOGNIZED;
     card.levelStreak = 0;
@@ -570,18 +563,6 @@ function promoteCard(card, speedAvg) {
     card.word_status === STATUS.RECOGNIZED &&
     card.levelStreak >= getPromotionThreshold()
   ) {
-    // const recoBoostThreshold =
-    //   LEARNING_RULES.speedThresholds.recoBoost + getInputOffset();
-
-    // const fastEnough = speedAvg !== null && speedAvg < recoBoostThreshold;
-
-    // if (fastEnough) {
-    //   card.coolDown *= 2.5;
-    //   console.log(speedAvg, "cooldown boost", recoBoostThreshold);
-    // } else {
-    //   console.log(speedAvg, "no cooldown boost", recoBoostThreshold);
-    // }
-
     card.word_status = STATUS.KNOWN;
     card.levelStreak = 0;
     return;
@@ -681,10 +662,29 @@ function applyCorrectScore() {
   if (globalStreak === 100) globalScore *= 3;
 }
 
+function checkLevelBoost(card) {
+  let boost = false;
+  const correctCount = card.firstAnswersHistory.filter(
+    (answer) =>
+      answer === ANSWERS_CATEGORIES.FIRST_CORRECT ||
+      answer === ANSWERS_CATEGORIES.FAST_CORRECT,
+  ).length;
+  const fastCount = card.firstAnswersHistory.filter(
+    (answer) => answer === ANSWERS_CATEGORIES.FAST_CORRECT,
+  ).length;
+  if (card.engaged === 4 && correctCount === 4 && fastCount >= 2) {
+    boost = true;
+    console.log("LEVEL BOOST");
+  }
+  return boost;
+}
+
 function handleFirstTryCorrect(card, category, speedAvg) {
   if (card.word_status === "mastered" && timeOut) {
     card.levelStreak = 0;
   }
+
+  if (checkLevelBoost(card)) card.levelStreak += 1;
 
   if (
     category === ANSWERS_CATEGORIES.FIRST_CORRECT ||
@@ -761,38 +761,82 @@ const Messages = {
   [ANSWERS_CATEGORIES.WRONG.WRONG_GUESS]: "ניחוש לא מוצלח. נסו שוב...",
 };
 
-function handleCorrectAnswer(card, category, speedAvg) {
+function scheduleCorrectFeedbackReset() {
+  clearTimeout(correctFeedbackTimeout);
+
+  correctFeedbackTimeout = setTimeout(() => {
+    bubble.classList.add("invisible");
+    feedbackBg.classList.remove("correct_bg");
+    feedbackBg.classList.remove("late_bg");
+  }, 1000);
+}
+
+function applyCorrectFeedbackStyles(category) {
   if (category === ANSWERS_CATEGORIES.LATE_CORRECT) {
     feedbackBg.classList.add("late_bg");
   } else if (
     category === ANSWERS_CATEGORIES.FIRST_CORRECT ||
     category === ANSWERS_CATEGORIES.FAST_CORRECT ||
-    category === ANSWERS_CATEGORIES.SLOW_CORRECT
+    category === ANSWERS_CATEGORIES.SLOW_CORRECT ||
+    category === ANSWERS_CATEGORIES.CORRECT_GUESS
   ) {
-    feedbackBg.classList.add("correct_bg");
-  } else if (category === ANSWERS_CATEGORIES.CORRECT_GUESS) {
     feedbackBg.classList.add("correct_bg");
   } else if (category === ANSWERS_CATEGORIES.RECOVERY_CORRECT) {
     feedbackBg.classList.add("late_bg");
   }
+  scheduleCorrectFeedbackReset();
+}
 
+function finalizeCorrectFeedbackUI() {
+  bubble.classList.add("invisible");
+}
+
+function stopQuestionTimers() {
+  if (questionClock) clearInterval(questionClock);
+}
+
+function runCorrectAnswerFlow(card, category, speedAvg) {
   if (firstTry) {
     handleFirstTryCorrect(card, category, speedAvg);
   }
 
   applyCorrectScore();
-
   renderStats();
-
-  if (questionClock) clearInterval(questionClock);
+  stopQuestionTimers();
 
   showMeaning(card, speedAvg, () => {
-    // renderTimer();
-    bubble.classList.add("invisible");
-    feedbackBg.classList.remove("correct_bg");
-    feedbackBg.classList.remove("late_bg");
+    finalizeCorrectFeedbackUI();
     resetState();
   });
+}
+
+function resetWrongFeedbackUI() {
+  bubble.classList.add("invisible");
+  feedbackBg.classList.remove("wrong_bg");
+  feedback.textContent = "";
+}
+
+function applyWrongAnswerPenalty(card, category) {
+  globalStreak = 0;
+  card.wordStreak = 0;
+  renderStats();
+
+  if (firstTry) {
+    handleFirstTryWrong(card, category);
+  } else {
+    card.wrongTries += 1;
+    saveProgress();
+  }
+}
+
+function restoreRetryUI() {
+  knowOrGuess.classList.add("hidden");
+  submitMainBtn.classList.remove("hidden");
+}
+
+function handleCorrectAnswer(card, category, speedAvg) {
+  applyCorrectFeedbackStyles(category);
+  runCorrectAnswerFlow(card, category, speedAvg);
 }
 
 function dimAnswer(selection) {
@@ -808,46 +852,34 @@ function dimAnswer(selection) {
 }
 
 function handleWrongAnswer(card, category) {
-  globalStreak = 0;
-  card.wordStreak = 0;
-  renderStats();
-
-  if (firstTry) {
-    handleFirstTryWrong(card, category);
-  } else {
-    card.wrongTries += 1;
-    saveProgress();
-  }
-  knowOrGuess.classList.add("hidden");
-  submitMainBtn.classList.remove("hidden");
+  applyWrongAnswerPenalty(card, category);
+  restoreRetryUI();
 
   setTimeout(() => {
-    bubble.classList.add("invisible");
-    feedbackBg.classList.remove("wrong_bg");
-    feedback.textContent = "";
+    resetWrongFeedbackUI();
   }, 1000);
 }
 
-function countFastStreak(card) {
-  let streakCount = 0;
-  for (
-    let i = card.firstAnswersHistory.length - 1;
-    i >= 0 && card.firstAnswersHistory[i] === ANSWERS_CATEGORIES.FAST_CORRECT;
-    i--
-  ) {
-    streakCount++;
-  }
-  return streakCount;
-}
+// function countFastStreak(card) {
+//   let streakCount = 0;
+//   for (
+//     let i = card.firstAnswersHistory.length - 1;
+//     i >= 0 && card.firstAnswersHistory[i] === ANSWERS_CATEGORIES.FAST_CORRECT;
+//     i--
+//   ) {
+//     streakCount++;
+//   }
+//   return streakCount;
+// }
 
-function calcFastStreakMult(fastSreakCount, boostThreshold) {
-  const mult = 1.5;
-  if (fastSreakCount < boostThreshold) return 1;
-  return fastSreakCount * mult;
-}
+// function calcFastStreakMult(fastStreakCount, boostThreshold) {
+//   const mult = 1.5;
+//   if (fastStreakCount < boostThreshold) return 1;
+//   return fastStreakCount * mult;
+// }
 
-function applyCooldown(card, category, fastStreakCount) {
-  let cooldown = card.coolDown ?? LEARNING_RULES.COOLDOWNS.DEFAULT;
+function applyCooldown(card, category) {
+  let cooldown = card.coolDown ?? LEARNING_RULES.cooldowns.defaultMs;
   console.log("cooldown before", cooldown / 1000);
 
   // const inputOffset = getInputOffset();
@@ -859,11 +891,13 @@ function applyCooldown(card, category, fastStreakCount) {
   //       ? LEARNING_RULES.cooldown.SPEED_MULTIPLIERS.under4s
   //       : LEARNING_RULES.cooldown.SPEED_MULTIPLIERS.normal;
 
-  const cooldownMultiplier = LEARNING_RULES.COOLDOWNS.MULTIPLIERS[category];
+  const cooldownMultiplier = LEARNING_RULES.cooldowns.multipliers[category];
 
-  const streakCooldownMult = calcFastStreakMult(fastStreakCount, 3);
+  const earlyBoost = checkLevelBoost(card) ? 3 : 1;
 
-  cooldown *= cooldownMultiplier * streakCooldownMult;
+  // const streakCooldownMult = calcFastStreakMult(fastStreakCount, 3);
+
+  cooldown *= cooldownMultiplier * earlyBoost;
   // if (category === ANSWERS_CATEGORIES.FIRST_CORRECT) {
   //   cooldown *= LEARNING_RULES.cooldown.CORRECT_MULTIPLIERS.know * speedMult;
   // } else if (category === ANSWERS_CATEGORIES.CORRECT_GUESS) {
@@ -877,15 +911,15 @@ function applyCooldown(card, category, fastStreakCount) {
   // }
 
   cooldown = Math.max(
-    LEARNING_RULES.COOLDOWNS.MIN,
-    Math.min(LEARNING_RULES.COOLDOWNS.MAX, cooldown),
+    LEARNING_RULES.cooldowns.minMs,
+    Math.min(LEARNING_RULES.cooldowns.maxMs, cooldown),
   );
   const cooldownInSec = cooldown / 1000;
   console.log(
     "mult",
     cooldownMultiplier,
-    "streakMult",
-    streakCooldownMult,
+    "earlyBoost",
+    earlyBoost,
     "after",
     cooldownInSec,
   );
@@ -960,43 +994,49 @@ function updateFeedbackGrid(answerCategory) {
 }
 
 function showAnswersCircles(card) {
-  lastAnswers.textContent = "";
-  for (const circle of card.firstAnswersHistory) {
-    const circle_fb = document.createElement("div");
-    circle_fb.classList.add("answers_circle");
-    circle_fb.classList.add(circle);
-    lastAnswers.append(circle_fb);
-  }
+  lastAnswers.innerHTML = "";
+
+  const lastFiveAnswers = card.firstAnswersHistory.slice(-5);
+
+  lastFiveAnswers.forEach((circle, index) => {
+    const el = document.createElement("div");
+    el.classList.add("answers_circle", circle);
+    // 👇 mark the last (most recent) one
+    if (index === lastFiveAnswers.length - 1) {
+      el.classList.add("latest_circle");
+    }
+
+    lastAnswers.appendChild(el);
+  });
 }
 
-function evaluateAnswer(correctAns, mode, duration) {
-  console.log(correctAns, mode, duration, timeOut);
+function evaluateAnswer(correctAns, mode, duration, didTimeout) {
   if (
     correctAns &&
-    !timeOut &&
+    !didTimeout &&
     mode === "know" &&
-    duration < LEARNING_RULES.speedThresholds.QUICK_ANSWER + getInputOffset()
+    duration < LEARNING_RULES.speedThresholds.quickMs + getInputOffset()
   )
     return ANSWERS_CATEGORIES.FAST_CORRECT;
   else if (
     correctAns &&
-    !timeOut &&
+    !didTimeout &&
     mode === "know" &&
-    duration > LEARNING_RULES.speedThresholds.SLOW_ANSWER + getInputOffset()
+    duration > LEARNING_RULES.speedThresholds.slowMs + getInputOffset()
   )
     return ANSWERS_CATEGORIES.SLOW_CORRECT;
   else if (
     correctAns &&
-    !timeOut &&
+    !didTimeout &&
     mode === "know" &&
-    duration >= LEARNING_RULES.speedThresholds.QUICK_ANSWER + getInputOffset()
+    duration >= LEARNING_RULES.speedThresholds.quickMs + getInputOffset()
   )
     return ANSWERS_CATEGORIES.FIRST_CORRECT;
   else if (correctAns && mode === "main")
     return ANSWERS_CATEGORIES.RECOVERY_CORRECT;
   else if (correctAns && mode === "guess")
     return ANSWERS_CATEGORIES.CORRECT_GUESS;
-  else if (correctAns && timeOut && mode === "know")
+  else if (correctAns && didTimeout && mode === "know")
     return ANSWERS_CATEGORIES.LATE_CORRECT;
   else if (!correctAns && mode === "guess")
     return ANSWERS_CATEGORIES.WRONG.WRONG_GUESS;
@@ -1005,7 +1045,6 @@ function evaluateAnswer(correctAns, mode, duration) {
   else if (!correctAns && mode === "main")
     return ANSWERS_CATEGORIES.WRONG.WRONG_ANSWER;
 }
-
 function getAvgSpeedFromRecalls(card, numOfRecalls) {
   const lastXrecalls = card.recalls.slice(-numOfRecalls);
   console.log(lastXrecalls);
@@ -1026,74 +1065,121 @@ function getAvgSpeedFromRecalls(card, numOfRecalls) {
   return speedAvg;
 }
 
-function onSubmit(e) {
-  e.preventDefault();
-  const card = chosenCard;
-  const button = e.currentTarget;
-  if (btnDisabled) return;
-  btnDisabled = true;
+function getSelectedAnswer() {
+  return document.querySelector('input[name="answer"]:checked');
+}
 
-  const mode = button.dataset.mode;
+function showNoSelectionMessage() {
+  btnDisabled = false;
+  showMsg("לא נבחרה תשובה");
+  setTimeout(() => {
+    bubble.classList.add("invisible");
+    feedback.textContent = "";
+  }, 800);
+}
 
-  const selected = document.querySelector('input[name="answer"]:checked');
-
-  if (!selected) {
-    btnDisabled = false;
-    feedback.textContent = "לא נבחרה תשובה";
-    setTimeout(() => (feedback.textContent = ""), 1000);
-    return;
-  }
-  const key = roundFlip ? "question" : "answer";
-  const correctAns = selected.value === card[key];
-  const duration = Math.min(performance.now() - questionStartTime, 20000);
-
+function updateCountdownProgress(card, duration) {
   if (countdownRound && firstTry) {
     const totalMs = getCountdownDuration(card);
     const progress = Math.min(duration / totalMs, 1);
     const width = 100 * (1 - progress);
     countdown.style.width = `${width}%`;
   }
+}
 
-  const answerCategory = evaluateAnswer(correctAns, mode, duration);
+function getAnswerResult(card, selected, mode) {
+  const key = roundFlip ? "question" : "answer";
+  const correctAns = selected.value === card[key];
+  const duration = Math.min(performance.now() - questionStartTime, 20000);
+
+  updateCountdownProgress(card, duration);
+
+  const didTimeout =
+    firstTry && countdownRound ? duration >= getCountdownDuration(card) : false;
+
+  const answerCategory = evaluateAnswer(correctAns, mode, duration, didTimeout);
+
+  return {
+    correctAns,
+    duration,
+    answerCategory,
+    didTimeout,
+  };
+}
+
+function applyAnswerState(card, result, mode) {
+  const { correctAns, duration, answerCategory } = result;
+
   if (!Object.values(ANSWERS_CATEGORIES.WRONG).includes(answerCategory)) {
-    console.log("not wrong, pushed to recalls");
-    chosenCard.recalls.push({ [answerCategory]: Math.floor(duration) });
+    card.recalls.push({ [answerCategory]: Math.floor(duration) });
   }
 
-  const speedAvg = getAvgSpeedFromRecalls(card, 5);
-  const fastStreakCount = countFastStreak(card);
-
-  console.log(answerCategory);
   submitted = true;
-  // button.disabled = true;
+
   if (firstTry) {
     card.engaged += 1;
     totalQs += 1;
     calcScore(correctAns, mode, duration, card);
     updateFeedbackGrid(answerCategory);
     card.firstAnswersHistory.push(answerCategory);
+    console.log(card);
   }
+
   currentTries++;
 
-  applyCooldown(card, answerCategory, fastStreakCount);
+  // const fastStreakCount = countFastStreak(card);
+  applyCooldown(card, answerCategory);
+}
+
+function finalizeTimeoutState(result) {
+  if (firstTry && countdownRound) {
+    timeOut = result.didTimeout;
+  }
+}
+
+function resetSubmitButtons() {
+  btnDisabled = false;
+  document.querySelectorAll(".submit").forEach((btn) => {
+    btn.disabled = false;
+  });
+}
+
+function handleAnswerOutcome(card, selected, result) {
+  const { correctAns, answerCategory } = result;
+  timeOut = result.didTimeout;
 
   showMsg(getMessage(answerCategory, currentTries));
 
-  if (firstTry && countdownRound) {
-    timeOut = duration >= getCountdownDuration(card);
-  }
-
   if (correctAns) {
+    const speedAvg = getAvgSpeedFromRecalls(card, 5);
     handleCorrectAnswer(card, answerCategory, speedAvg);
   } else {
     dimAnswer(selected);
     handleWrongAnswer(card, answerCategory);
-
-    btnDisabled = false;
-    document.querySelectorAll(".submit").forEach((btn) => {
-      btn.disabled = false;
-    });
+    resetSubmitButtons();
   }
+}
+
+function onSubmit(e) {
+  e.preventDefault();
+  const card = chosenCard;
+  const button = e.currentTarget;
+
+  if (btnDisabled) return;
+  btnDisabled = true;
+
+  const mode = button.dataset.mode;
+  const selected = getSelectedAnswer();
+
+  if (!selected) {
+    showNoSelectionMessage();
+    return;
+  }
+
+  const result = getAnswerResult(card, selected, mode);
+
+  applyAnswerState(card, result, mode);
+  handleAnswerOutcome(card, selected, result);
 }
 
 function startQuestionTimer() {
@@ -1169,6 +1255,18 @@ function startCountDown(card) {
 }
 
 function resetState() {
+  if (correctFeedbackTimeout) clearTimeout(correctFeedbackTimeout);
+  if (overlayTimeout) clearTimeout(overlayTimeout);
+
+  overlay.classList.remove("show");
+  overlayTimeout = null;
+  overlayMinTimeDone = false;
+  isHolding = false;
+  pendingNext = null;
+
+  bubble.classList.add("invisible");
+  feedbackBg.classList.remove("correct_bg", "late_bg", "wrong_bg");
+
   flipLogo.style.display = "none";
   countdownCon.style.display = "none";
   blindRecallLogo.classList.add("hidden");
@@ -1184,6 +1282,7 @@ function resetState() {
   submitButtons.forEach((button) => {
     button.disabled = false;
   });
+
   currentTries = 0;
   firstTry = true;
   roundFlip = false;

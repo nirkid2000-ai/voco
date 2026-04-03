@@ -136,7 +136,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin: 12px 0px 0px 0px;
+  /* margin: 12px 0px 0px 0px; */
 
   /* background-color: #7bdb80; */
 }
@@ -428,6 +428,7 @@ input[type="radio"] {
   width: 100%;
   position: relative;
   margin-bottom: 6px;
+  margin-top: 8px;
 }
 
 .meaning_overlay {
@@ -440,7 +441,6 @@ input[type="radio"] {
   align-items: center;
 
   text-align: center;
-  padding: 16px;
 
   background: #004044;
   border-radius: 4px;
@@ -449,9 +449,8 @@ input[type="radio"] {
   /* transform: scale(0.96); */
   pointer-events: none;
 
-  transition:
-    opacity 0.14s ease,
-    transform 0.14s ease;
+  transition: opacity 0.3s ease;
+  /* transform 0.3s ease; */
   z-index: 5;
 }
 
@@ -467,6 +466,8 @@ input[type="radio"] {
   text-transform: capitalize;
   font-weight: bold;
   color: #ffffff;
+
+  display: none;
 }
 
 .meaning_text {
@@ -489,13 +490,20 @@ input[type="radio"] {
   margin: 15px 0px;
   display: flex;
   flex-direction: row-reverse;
+  align-items: center;
   gap: 5px;
 }
 
 .answers_circle {
+  width: 14px;
+  height: 14px;
+  border-radius: 20px;
+}
+
+.latest_circle {
   width: 18px;
   height: 18px;
-  border-radius: 20px;
+  border: 2px solid white;
 }
 
 .card_stats {
