@@ -2,10 +2,11 @@
 import data from "/en200.js";
 import { LEARNING_RULES } from "/learningRules.js";
 import {
-  getStageKey,
-  shouldFlip,
-  shouldBlind,
-  getStarsFill,
+  // getStageKey,
+  shouldFlipNew,
+  shouldBlindNew,
+  getStarsFillNew,
+  getStageStep,
 } from "/learningHelpers.js";
 
 const qText = document.querySelector(".q");
@@ -54,7 +55,7 @@ function getInputType() {
 
 function createDefaultProgress() {
   return {
-    word_status: "new",
+    wordLevel: 0,
     scores: [],
     last5Scores: [],
     wordScore: 0,
@@ -89,7 +90,7 @@ function saveProgress() {
     cards.map((card) => [
       card.id,
       {
-        word_status: card.word_status,
+        wordLevel: card.wordLevel,
         scores: card.scores,
         last5Scores: card.last5Scores,
         wordScore: card.wordScore,
@@ -174,26 +175,6 @@ function resetProgress() {
 }
 
 let cards = createInitialCards();
-
-const STATUS = {
-  NEW: "new",
-  UNKNOWN: "unknown",
-  RECOGNIZED: "recognized",
-  KNOWN: "known",
-  KNOWWELL: "knownWell",
-  STRONG: "strong",
-  MASTERED: "mastered",
-};
-
-const HEBSTATUS = {
-  new: "מילה חדשה",
-  unknown: "מילה לא מוכרת",
-  recognized: "מילה שאתה מזהה",
-  known: "מילה שאתה מכיר",
-  knownWell: "מילה שאתה מכיר היטב",
-  strong: "מילה שאתה יודע בביטחון ",
-  mastered: "מילה שאתה שולט בה",
-};
 
 const ANSWERS_CATEGORIES = {
   FAST_CORRECT: "fastCorrect",
@@ -286,22 +267,21 @@ function msToSeconds(milliseconds) {
 function showMeaning(card, speedAvg, onDone) {
   pendingNext = onDone;
   overlayMinTimeDone = false;
+  const answerKey = roundFlip ? "question" : "answer";
 
   showAnswersCircles(card);
   overlayWord.textContent = card.question;
-  overlayText.textContent = card.meaning || card.answer;
+  overlayText.textContent = card[answerKey];
   overlayTime.textContent = `זמן מענה: ${msToSeconds(
     Object.values(card.recalls.at(-1))[0],
   )} שניות`;
   overlayAvg.textContent = `זמן מענה ממוצע: ${msToSeconds(speedAvg)} שניות`;
   overlayCooldown.textContent = `זמן קולדאון: ${msToTime(card.coolDown)}`;
 
-  overlayExample.textContent =
-    card.word_status === "new" ||
-    card.word_status === "unknown" ||
-    card.word_status === "recognized"
-      ? card.example || "..."
-      : "";
+  overlayExample.textContent = LEARNING_RULES.stageSettings[card.wordLevel]
+    .example
+    ? card.example || "..."
+    : "";
 
   overlay.classList.add("show");
 
@@ -331,9 +311,12 @@ function getInputOffset() {
   return LEARNING_RULES.inputOffsets[INPUT_TYPE] ?? 0;
 }
 
-function getPromotionThreshold() {
-  return LEARNING_RULES.promotion.requiredLevelStreak;
-}
+// function getPromotionThreshold() {
+//   return LEARNING_RULES.promotion.requiredLevelStreak;
+// }
+// function getPromotionThresholdNew(card) {
+//   return LEARNING_RULES.stageSettings[card.word_status].maxLevel;
+// }
 
 function getDiffArrowPosition(card) {
   return LEARNING_RULES.diffLevels[card.diff];
@@ -352,9 +335,8 @@ function shouldCountdown(card) {
 }
 
 function getCountdownDuration(card) {
-  return (
-    LEARNING_RULES.stageCountdowns[getStageKey(card)] * 1000 + getInputOffset()
-  );
+  const step = getStageStep(card);
+  return step ? step.countdown * 1000 + getInputOffset() : 0;
 }
 
 function chooseQuestion() {
@@ -409,8 +391,8 @@ function chooseQuestion() {
   // check the highest engaged value and only allow questions with lower engaged value show
   //if all appered values are equal then choose random from all cards.
   if (chosenCard) {
-    roundFlip = shouldFlip(chosenCard);
-    blindRound = shouldBlind(chosenCard);
+    roundFlip = shouldFlipNew(chosenCard);
+    blindRound = shouldBlindNew(chosenCard);
     countdownRound = shouldCountdown(chosenCard);
     if (!chosenCard.inCycle) chosenCard.inCycle = true;
   }
@@ -422,14 +404,14 @@ function renderQuestionText(card) {
   qText.textContent = roundFlip ? card.answer : card.question;
 }
 function updateWordStats(card) {
-  levelText.textContent = HEBSTATUS[card.word_status];
-  difArrow.style.left = getDiffArrowPosition(card);
+  levelText.textContent = LEARNING_RULES.stageSettings[card.wordLevel].status;
+  difArrow.style.left = `${getDiffArrowPosition(card)}%`;
   if (submitted) {
     starsFill.classList.add("animate-fill");
   } else {
     starsFill.classList.remove("animate-fill");
   }
-  starsFill.style.setProperty("--fill", `${getStarsFill(card)}%`);
+  starsFill.style.setProperty("--fill", `${getStarsFillNew(card)}%`);
 }
 
 function renderQuestion(card) {
@@ -466,12 +448,7 @@ function showAnswers(card) {
 
 function chooseAnswers(card, num, correctAnswer) {
   const answerKey = roundFlip ? "question" : "answer";
-  const maxLenDiff =
-    card.word_status === "new" || card.word_status === "unknown"
-      ? 4
-      : card.word_status === "recognized" || card.word_status === "known"
-        ? 3
-        : 2;
+  const maxLenDiff = LEARNING_RULES.stageSettings[card.wordLevel].maxLengthDiff;
 
   const strictPool = cards.filter((word) => {
     const candidate = word[answerKey];
@@ -547,95 +524,30 @@ function updateAccuracy(card) {
 }
 
 function promoteCard(card) {
-  if (card.word_status === STATUS.NEW) {
-    card.word_status = STATUS.RECOGNIZED;
-    card.levelStreak = 0;
-    return;
+  console.log(LEARNING_RULES.stageSettings[card.wordLevel].label);
+  card.levelStreak = 0;
+  if (card.wordLevel === 0) {
+    card.wordLevel += 2; // skips the unknown status which is 1
+  } else {
+    card.wordLevel = Math.min(card.wordLevel + 1, 6);
   }
-
-  if (card.word_status === STATUS.UNKNOWN) {
-    card.word_status = STATUS.RECOGNIZED;
-    card.levelStreak = 0;
-    return;
-  }
-
-  if (
-    card.word_status === STATUS.RECOGNIZED &&
-    card.levelStreak >= getPromotionThreshold()
-  ) {
-    card.word_status = STATUS.KNOWN;
-    card.levelStreak = 0;
-    return;
-  }
-
-  if (
-    card.word_status === STATUS.KNOWN &&
-    card.levelStreak >= getPromotionThreshold()
-  ) {
-    card.word_status = STATUS.KNOWWELL;
-    card.levelStreak = 0;
-    return;
-  }
-
-  if (
-    card.word_status === STATUS.KNOWWELL &&
-    card.levelStreak >= getPromotionThreshold()
-  ) {
-    card.word_status = STATUS.STRONG;
-    card.levelStreak = 0;
-    return;
-  }
-
-  if (
-    card.word_status === STATUS.STRONG &&
-    card.levelStreak >= getPromotionThreshold()
-  ) {
-    card.word_status = STATUS.MASTERED;
-    card.levelStreak = 0;
-    return;
-  }
-
-  if (card.word_status === STATUS.MASTERED) {
-    if (card.levelStreak >= getPromotionThreshold()) {
-      card.levelStreak = 1;
-    }
-    return;
-  }
+  console.log(LEARNING_RULES.stageSettings[card.wordLevel].label);
 }
 
 function demoteCard(card) {
-  if (card.word_status === STATUS.NEW) {
-    card.word_status = STATUS.UNKNOWN;
-    card.levelStreak = 0;
-    return;
+  console.log(LEARNING_RULES.stageSettings[card.wordLevel].label);
+  if (card.wordLevel === 0) {
+    card.wordLevel = 1;
+  } else if (card.wordLevel >= 2) {
+    card.wordLevel -= 1;
+    console.log(card.wordLevel);
+    console.log(
+      LEARNING_RULES.stageSettings[card.wordLevel].streakThreshold - 1,
+    );
+    card.levelStreak =
+      LEARNING_RULES.stageSettings[card.wordLevel].streakThreshold - 1;
   }
-
-  if (card.word_status === STATUS.RECOGNIZED) {
-    card.word_status = STATUS.UNKNOWN;
-    card.levelStreak = 1;
-    return;
-  }
-
-  if (card.word_status === STATUS.KNOWN) {
-    card.word_status = STATUS.RECOGNIZED;
-    card.levelStreak = 1;
-    return;
-  }
-  if (card.word_status === STATUS.KNOWWELL) {
-    card.word_status = STATUS.KNOWN;
-    card.levelStreak = 1;
-    return;
-  }
-  if (card.word_status === STATUS.STRONG) {
-    card.word_status = STATUS.KNOWWELL;
-    card.levelStreak = 1;
-    return;
-  }
-
-  if (card.word_status === STATUS.MASTERED) {
-    card.word_status = STATUS.STRONG;
-    card.levelStreak = 1;
-  }
+  console.log(LEARNING_RULES.stageSettings[card.wordLevel].label);
 }
 
 function getTriesMessage(tries) {
@@ -679,10 +591,10 @@ function checkLevelBoost(card) {
   return boost;
 }
 
-function handleFirstTryCorrect(card, category, speedAvg) {
-  if (card.word_status === "mastered" && timeOut) {
-    card.levelStreak = 0;
-  }
+function handleFirstTryCorrect(card, category) {
+  // if (card.word_status === "mastered" && timeOut) {
+  //   card.levelStreak = 0;
+  // }
 
   if (checkLevelBoost(card)) card.levelStreak += 1;
 
@@ -691,8 +603,20 @@ function handleFirstTryCorrect(card, category, speedAvg) {
     category === ANSWERS_CATEGORIES.FAST_CORRECT ||
     category === ANSWERS_CATEGORIES.SLOW_CORRECT
   ) {
-    card.levelStreak += 1;
-    promoteCard(card, speedAvg);
+    if (
+      card.levelStreak <
+      LEARNING_RULES.stageSettings[card.wordLevel].streakThreshold
+    ) {
+      card.levelStreak += 1;
+
+      if (
+        card.levelStreak >=
+          LEARNING_RULES.stageSettings[card.wordLevel].streakThreshold &&
+        card.wordLevel < 6
+      ) {
+        promoteCard(card);
+      }
+    }
   } else if (category === ANSWERS_CATEGORIES.CORRECT_GUESS) {
     correctGuesses += 1;
     totalGuesses += 1;
@@ -719,7 +643,6 @@ function handleFirstTryWrong(card, category) {
   }
   firstTry = false;
   card.wrongAnswers += 1;
-  card.levelStreak = 0;
   card.wrongTries += 1;
   clearInterval(countdownInterval);
   countdown.style.width = `0%`;
@@ -891,7 +814,8 @@ function applyCooldown(card, category) {
   //       ? LEARNING_RULES.cooldown.SPEED_MULTIPLIERS.under4s
   //       : LEARNING_RULES.cooldown.SPEED_MULTIPLIERS.normal;
 
-  const cooldownMultiplier = LEARNING_RULES.cooldowns.multipliers[category];
+  const cooldownMultiplier =
+    LEARNING_RULES.cooldowns.multipliers[category] ?? 1;
 
   const earlyBoost = checkLevelBoost(card) ? 3 : 1;
 
@@ -1091,6 +1015,13 @@ function getAnswerResult(card, selected, mode) {
   const key = roundFlip ? "question" : "answer";
   const correctAns = selected.value === card[key];
   const duration = Math.min(performance.now() - questionStartTime, 20000);
+  const asnwerTime = blindRound
+    ? duration -
+      (getCountdownDuration(card) -
+        LEARNING_RULES.stageSettings[card.wordLevel].blindTimeToAnswer)
+    : duration;
+
+  console.log(duration, asnwerTime);
 
   updateCountdownProgress(card, duration);
 
@@ -1293,6 +1224,12 @@ function resetState() {
   submitted = false;
 
   pickQuestionAndAnswers();
+  if (!chosenCard) {
+    qText.textContent = "🎉 סיימת את כל המילים!";
+    list.innerHTML = "";
+    return;
+  }
+
   updateUI();
 
   startQuestionTimer();
@@ -1308,7 +1245,8 @@ function blindRecall(card) {
 
   const inputOffset = getInputOffset();
   const revealBeforeEnd =
-    card.word_status === "strong" ? 2000 + inputOffset : 1500 + inputOffset;
+    (LEARNING_RULES.stageSettings[card.wordLevel].blindTimeToAnswer ?? 2000) +
+    inputOffset;
 
   const revealAtMs = Math.max(0, totalCountdownMs - revealBeforeEnd);
 
@@ -1369,6 +1307,7 @@ function removeWord() {
   feedback.textContent = "המילה הוסרה מהמאגר";
   setTimeout(resetState, 2000);
 }
+
 removeWordBtn.addEventListener("click", removeWord);
 startBtn.addEventListener("click", startApp);
 

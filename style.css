@@ -449,7 +449,7 @@ input[type="radio"] {
   /* transform: scale(0.96); */
   pointer-events: none;
 
-  transition: opacity 0.3s ease;
+  /* transition: opacity 0.3s ease; */
   /* transform 0.3s ease; */
   z-index: 5;
 }
