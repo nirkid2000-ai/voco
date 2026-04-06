@@ -69,7 +69,13 @@ export const LEARNING_RULES = {
       status: "מילה חדשה",
       streakThreshold: 1,
       maxLengthDiff: 4,
-      0: { countdown: 20, stars: 0, flip: false, blind: false },
+      0: {
+        countdown: 20,
+        stars: 0,
+        flip: false,
+        blind: false,
+        demoteTo: [0, 0],
+      },
     },
     1: {
       label: "unknown",
@@ -78,7 +84,13 @@ export const LEARNING_RULES = {
       streakThreshold: 1,
       maxLengthDiff: 4,
 
-      0: { countdown: 15, stars: 0, flip: false, blind: false },
+      0: {
+        countdown: 15,
+        stars: 0,
+        flip: false,
+        blind: false,
+        demoteTo: [1, 0],
+      },
     },
     2: {
       label: "recognized",
@@ -86,8 +98,20 @@ export const LEARNING_RULES = {
       example: true,
       streakThreshold: 2,
       maxLengthDiff: 3,
-      0: { countdown: 12, stars: 9.5, flip: false, blind: false },
-      1: { countdown: 10, stars: 20, flip: false, blind: false },
+      0: {
+        countdown: 12,
+        stars: 9.5,
+        flip: false,
+        blind: false,
+        demoteTo: [1, 0],
+      },
+      1: {
+        countdown: 10,
+        stars: 20,
+        flip: false,
+        blind: false,
+        demoteTo: [1, 0],
+      },
     },
     3: {
       label: "known",
@@ -95,9 +119,20 @@ export const LEARNING_RULES = {
       example: false,
       streakThreshold: 2,
       maxLengthDiff: 3,
-
-      0: { countdown: 8, stars: 30, flip: false, blind: false },
-      1: { countdown: 7, stars: 40, flip: false, blind: false },
+      0: {
+        countdown: 8,
+        stars: 30,
+        flip: false,
+        blind: false,
+        demoteTo: [2, 1],
+      },
+      1: {
+        countdown: 7,
+        stars: 40,
+        flip: false,
+        blind: false,
+        demoteTo: [2, 1],
+      },
     },
     4: {
       label: "knownWell",
@@ -105,8 +140,20 @@ export const LEARNING_RULES = {
       example: false,
       streakThreshold: 2,
       maxLengthDiff: 2,
-      0: { countdown: 8, stars: 50, flip: true, blind: false },
-      1: { countdown: 6, stars: 60, flip: false, blind: false },
+      0: {
+        countdown: 8,
+        stars: 50,
+        flip: true,
+        blind: false,
+        demoteTo: [3, 1],
+      },
+      1: {
+        countdown: 6,
+        stars: 60,
+        flip: false,
+        blind: false,
+        demoteTo: [4, 0],
+      },
     },
     5: {
       label: "strong",
@@ -114,9 +161,21 @@ export const LEARNING_RULES = {
       example: false,
       streakThreshold: 2,
       maxLengthDiff: 2,
-      blindTimeToAnswer: 2000,
-      0: { countdown: 5, stars: 70, flip: true, blind: false },
-      1: { countdown: 7, stars: 80, flip: false, blind: true },
+      blindTime: 3000,
+      0: {
+        countdown: 5,
+        stars: 70,
+        flip: true,
+        blind: false,
+        demoteTo: [4, 1],
+      },
+      1: {
+        countdown: 2.5,
+        stars: 80,
+        flip: false,
+        blind: true,
+        demoteTo: [5, 0],
+      },
     },
     6: {
       label: "mastered",
@@ -124,9 +183,39 @@ export const LEARNING_RULES = {
       example: false,
       streakThreshold: 2,
       maxLengthDiff: 2,
-      blindTimeToAnswer: 1500,
-      0: { countdown: 4, stars: 90, flip: true, blind: true },
-      1: { countdown: 4, stars: 100, flip: false, blind: true },
+      blindTime: 2500,
+      0: {
+        countdown: 1.5,
+        stars: 90,
+        flip: false,
+        blind: true,
+        demoteTo: [5, 1],
+      },
+      1: {
+        countdown: 1.5,
+        stars: 100,
+        flip: true,
+        blind: true,
+        demoteTo: [6, 0],
+      },
+    },
+  },
+
+  scoring: {
+    streakBonuses: [
+      { streak: 5, type: "add", value: 200 },
+      { streak: 10, type: "add", value: 400 },
+      { streak: 25, type: "add", value: 600 },
+      { streak: 50, type: "mult", value: 2 },
+      { streak: 100, type: "mult", value: 3 },
+    ],
+  },
+
+  boost: {
+    earlyLevelBoost: {
+      requiredEngaged: 4,
+      requiredCorrect: 4,
+      requiredFast: 2,
     },
   },
 
@@ -137,5 +226,19 @@ export const LEARNING_RULES = {
     B2: 50,
     C1: 70,
     C2: 85,
+  },
+};
+
+export const ANSWERS_CATEGORIES = {
+  FAST_CORRECT: "fastCorrect",
+  FIRST_CORRECT: "correct",
+  SLOW_CORRECT: "slowCorrect",
+  LATE_CORRECT: "lateCorrect",
+  RECOVERY_CORRECT: "recoveryCorrect",
+  CORRECT_GUESS: "correctGuess",
+  WRONG: {
+    WRONG_GUESS: "wrongGuess",
+    WRONG_ANSWER: "wrongAnswer",
+    STRONG_WRONG: "strongWrong",
   },
 };
