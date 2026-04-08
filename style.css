@@ -175,6 +175,18 @@
   cursor: pointer;
 }
 
+.start_btn {
+  width: 100%;
+  color: white;
+  font: inherit;
+  font-size: 18px;
+  border: none;
+  background-color: #376cfd;
+  padding: 12px 0px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
 .first {
   width: 49%;
 }
@@ -423,6 +435,18 @@ input[type="radio"] {
   display: flex;
   justify-content: space-between;
   margin: 15px 0px;
+  padding: 12px 0px;
+  border-radius: 5px;
+}
+
+.menu_btn {
+  color: white;
+  width: 70px;
+  background-color: #313131;
+  padding: 8px 0px;
+  border-radius: 5px;
+  border: 0px;
+  cursor: pointer;
 }
 
 .wordlist_wrap {
@@ -472,6 +496,7 @@ input[type="radio"] {
 }
 
 .meaning_text {
+  text-transform: capitalize;
   font-size: 30px;
   margin-bottom: 6px;
 }
@@ -518,6 +543,10 @@ input[type="radio"] {
   left: -5px;
   display: block;
   width: 60px;
+}
+
+.crow_home {
+  width: 160px;
 }
 
 #eyeClosedL,
@@ -614,4 +643,32 @@ input[type="radio"] {
 .blind_counter {
   position: absolute;
   top: 10px;
+}
+
+.screen.hidden {
+  display: none !important;
+}
+
+#home-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ebfff6;
+}
+
+.home_inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  text-align: center;
+}
+
+#summary-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ebfff6;
 }

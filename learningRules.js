@@ -9,7 +9,7 @@ export const LEARNING_RULES = {
   cooldowns: {
     defaultMs: 30000,
     minMs: 1000,
-    maxMs: 12000,
+    maxMs: 1200000,
     multipliers: {
       fastCorrect: 2,
       correct: 1.5,
@@ -70,11 +70,11 @@ export const LEARNING_RULES = {
       streakThreshold: 1,
       maxLengthDiff: 4,
       0: {
-        countdown: 20,
+        countdown: 60,
         stars: 0,
         flip: false,
         blind: false,
-        demoteTo: [0, 0],
+        demoteTo: [1, 0],
       },
     },
     1: {
@@ -85,7 +85,7 @@ export const LEARNING_RULES = {
       maxLengthDiff: 4,
 
       0: {
-        countdown: 15,
+        countdown: 40,
         stars: 0,
         flip: false,
         blind: false,
@@ -99,7 +99,7 @@ export const LEARNING_RULES = {
       streakThreshold: 2,
       maxLengthDiff: 3,
       0: {
-        countdown: 12,
+        countdown: 30,
         stars: 9.5,
         flip: false,
         blind: false,
@@ -120,14 +120,14 @@ export const LEARNING_RULES = {
       streakThreshold: 2,
       maxLengthDiff: 3,
       0: {
-        countdown: 8,
+        countdown: 20,
         stars: 30,
         flip: false,
         blind: false,
         demoteTo: [2, 1],
       },
       1: {
-        countdown: 7,
+        countdown: 15,
         stars: 40,
         flip: false,
         blind: false,
@@ -141,14 +141,14 @@ export const LEARNING_RULES = {
       streakThreshold: 2,
       maxLengthDiff: 2,
       0: {
-        countdown: 8,
+        countdown: 15,
         stars: 50,
         flip: true,
         blind: false,
         demoteTo: [3, 1],
       },
       1: {
-        countdown: 6,
+        countdown: 10,
         stars: 60,
         flip: false,
         blind: false,
@@ -161,16 +161,16 @@ export const LEARNING_RULES = {
       example: false,
       streakThreshold: 2,
       maxLengthDiff: 2,
-      blindTime: 3000,
+      blindTime: 5000,
       0: {
-        countdown: 5,
+        countdown: 10,
         stars: 70,
         flip: true,
         blind: false,
         demoteTo: [4, 1],
       },
       1: {
-        countdown: 2.5,
+        countdown: 10,
         stars: 80,
         flip: false,
         blind: true,
@@ -183,16 +183,16 @@ export const LEARNING_RULES = {
       example: false,
       streakThreshold: 2,
       maxLengthDiff: 2,
-      blindTime: 2500,
+      blindTime: 5000,
       0: {
-        countdown: 1.5,
+        countdown: 5,
         stars: 90,
         flip: false,
         blind: true,
         demoteTo: [5, 1],
       },
       1: {
-        countdown: 1.5,
+        countdown: 5,
         stars: 100,
         flip: true,
         blind: true,

@@ -1,8 +1,6 @@
 "use strict";
-import data from "/en200.js";
 import { LEARNING_RULES, ANSWERS_CATEGORIES } from "/learningRules.js";
 import {
-  // getStageKey,
   shouldFlipNew,
   shouldBlindNew,
   getStarsFillNew,
@@ -11,6 +9,31 @@ import {
   calculateCooldown,
   isWrongCategory,
 } from "/learningHelpers.js";
+import { createInitialCards, createDefaultRoundState } from "/state.js";
+
+import { msToTime, msToSeconds, getInputOffset, INPUT_TYPE } from "/utils.js";
+
+import {
+  getDiffArrowPosition,
+  getCountdownDuration,
+  getBlindDuration,
+  evaluateAnswer,
+  getAvgSpeedFromRecalls,
+} from "/quizHelpers.js";
+
+import { Messages } from "/messages.js";
+
+import { startAnimations } from "./animations.js";
+
+const homeScreen = document.getElementById("home-screen");
+const appScreen = document.getElementById("app-screen");
+const summaryScreen = document.getElementById("summary-screen");
+
+const homeStartBtn = document.getElementById("home-start-btn");
+const studyMoreBtn = document.getElementById("study-more-btn");
+
+const backHomeBtn = document.getElementById("back_home_btn");
+const endSessionBtn = document.getElementById("end_session_btn");
 
 const qText = document.querySelector(".q");
 const levelText = document.querySelector(".word_level");
@@ -36,7 +59,7 @@ const blindRecallLogo = document.querySelector(".blind_recall");
 const blindCounter = document.querySelector(".blind_counter");
 const flipLogo = document.querySelector(".flip_logo");
 const feedGrid = document.querySelector(".fb_grid");
-const startBtn = document.querySelector(".start");
+// const startBtn = document.querySelector(".start");
 const overlay = document.querySelector(".meaning_overlay");
 const overlayWord = document.querySelector(".meaning_word");
 const overlayText = document.querySelector(".meaning_text");
@@ -47,6 +70,8 @@ const overlayCooldown = document.querySelector(".next_cooldown");
 const lastAnswers = document.querySelector(".last_answers");
 const bubble = document.querySelector(".bubble_wrap");
 
+const summaryCon = document.querySelector(".summary_con");
+
 const circle = document.getElementById("progressCircle");
 const radius = 45;
 const circumference = 2 * Math.PI * radius;
@@ -55,46 +80,6 @@ circle.style.strokeDasharray = `${circumference}`;
 circle.style.strokeDashoffset = `0`;
 
 const STORAGE_KEY = "vocab-app-progress-v1";
-
-const INPUT_TYPE = getInputType();
-
-function getInputType() {
-  const hasTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
-
-  return hasTouch ? "touch" : "pointer";
-}
-
-function createDefaultProgress() {
-  return {
-    wordLevel: 0,
-    scores: [],
-    last5Scores: [],
-    wordScore: 0,
-    engaged: 0,
-    rightAnswers: 0,
-    wordStreak: 0,
-    levelStreak: 0,
-    wrongAnswers: 0,
-    accuracy: 0,
-    wrongTries: 0,
-    recalls: [],
-    firstAnswersHistory: [],
-    coolDown: LEARNING_RULES.cooldowns.defaultMs,
-    inCycle: false,
-    cooldownUntil: null,
-    isRemoved: false,
-  };
-}
-
-function createInitialCards() {
-  return data.words.map((word, i) => ({
-    id: i + 1,
-    question: word.en,
-    answer: word.he,
-    diff: word.level,
-    ...createDefaultProgress(),
-  }));
-}
 
 function saveProgress() {
   const cardsProgress = Object.fromEntries(
@@ -145,10 +130,16 @@ function loadProgress() {
 
     cards = createInitialCards();
 
-    if (!raw) return;
+    if (!raw) {
+      buildCardsLookup();
+      return;
+    }
 
     const state = JSON.parse(raw);
-    if (!state) return;
+    if (!state) {
+      buildCardsLookup();
+      return;
+    }
 
     if (state.cardsProgress) {
       cards = cards.map((card) => {
@@ -156,6 +147,8 @@ function loadProgress() {
         return savedProgress ? { ...card, ...savedProgress } : card;
       });
     }
+
+    buildCardsLookup();
 
     globalScore = state.globalScore ?? 0;
     globalStreak = state.globalStreak ?? 0;
@@ -166,6 +159,7 @@ function loadProgress() {
   } catch (err) {
     console.error("Failed to load progress:", err);
     cards = createInitialCards();
+    buildCardsLookup();
   }
 }
 
@@ -186,20 +180,7 @@ function resetProgress() {
 }
 
 let cards = createInitialCards();
-
-// const ANSWERS_CATEGORIES = {
-//   FAST_CORRECT: "fastCorrect",
-//   FIRST_CORRECT: "correct",
-//   SLOW_CORRECT: "slowCorrect",
-//   LATE_CORRECT: "lateCorrect",
-//   RECOVERY_CORRECT: "recoveryCorrect",
-//   CORRECT_GUESS: "correctGuess",
-//   WRONG: {
-//     WRONG_GUESS: "wrongGuess",
-//     WRONG_ANSWER: "wrongAnswer",
-//     STRONG_WRONG: "strongWrong",
-//   },
-// };
+let cardsById = new Map();
 
 let roundState = {
   firstTry: true,
@@ -213,30 +194,26 @@ let roundState = {
 };
 
 let chosenCard;
-// let firstTry = true;
-// let currentTries = 0;
+
+let recentWordIds = [];
+
 let globalStreak = 0;
 let globalScore = 0;
 let correctGuesses = 0;
 let totalGuesses = 0;
 let totalCorrect = 0;
 let totalQs = 0;
+
 let currentSession = new Map();
 let currentSessionArr = [];
+
 let questionStartTime;
 let sessionStartTime;
-// let btnDisabled = false;
-// let roundFlip;
-// let blindRound;
-// let countdownRound;
 let countdownInterval;
-// let timeOut = false;
-// let submitted = false;
 let blindRevealTimeout;
 let flashEye;
 let questionClock;
 let sessionClock;
-let recentWordIds = [];
 
 let overlayTimeout = null;
 let correctFeedbackTimeout = null;
@@ -244,18 +221,101 @@ let isHolding = false;
 let pendingNext = null;
 let overlayMinTimeDone = false;
 
-function createDefaultRoundState() {
-  return {
-    firstTry: true,
-    currentTries: 0,
-    submitted: false,
-    btnDisabled: false,
-    roundFlip: false,
-    blindRound: false,
-    // countdownRound: false,
-    timeOut: false,
-  };
+function buildCardsLookup() {
+  cardsById = new Map(cards.map((card) => [card.id, card]));
+  console.log(cardsById);
 }
+
+let currentSessionStats = new Map();
+
+function getSessionCardStats(card) {
+  if (!currentSessionStats.has(card.id)) {
+    currentSessionStats.set(card.id, {
+      id: card.id,
+      engagements: 0,
+      answerCategories: [],
+      recalls: [],
+    });
+  }
+  return currentSessionStats.get(card.id);
+}
+
+function navigate(screenName) {
+  homeScreen.classList.add("hidden");
+  appScreen.classList.add("hidden");
+  summaryScreen.classList.add("hidden");
+
+  if (screenName === "home") {
+    homeScreen.classList.remove("hidden");
+  }
+
+  if (screenName === "app") {
+    appScreen.classList.remove("hidden");
+  }
+
+  if (screenName === "summary") {
+    summaryScreen.classList.remove("hidden");
+  }
+}
+
+function getSessionSummaryFromStats() {
+  const sessionCards = Array.from(currentSessionStats.values());
+
+  return sessionCards.map((sessionCard) => {
+    const card = cardsById.get(sessionCard.id);
+
+    const avgRecallTime =
+      sessionCard.recalls.length > 0
+        ? sessionCard.recalls.reduce((sum, recall) => sum + recall.time, 0) /
+          sessionCard.recalls.length
+        : 0;
+
+    const avgRecallSeconds = (avgRecallTime / 1000).toFixed(2);
+
+    return {
+      ...sessionCard,
+      question: card.question,
+      answer: card.answer,
+      wordLevel: card.wordLevel,
+      avgRecallSeconds,
+    };
+  });
+}
+
+function saveSessionStats(card, answerCategory, duration, isFirstTry) {
+  const sessionCard = getSessionCardStats(card);
+  console.log(sessionCard);
+
+  if (isFirstTry) {
+    sessionCard.engagements += 1;
+  }
+
+  if (!isWrongCategory(answerCategory)) {
+    sessionCard.recalls.push({
+      category: answerCategory,
+      time: Math.floor(duration),
+    });
+  }
+}
+
+function renderSummary() {
+  const enriched = getSessionSummaryFromStats();
+
+  const totalQuestions = enriched.reduce(
+    (sum, item) => item.engagements + sum,
+    0,
+  );
+  console.log(enriched, totalQuestions);
+  summaryCon.textContent = globalScore;
+}
+
+function stopSession() {
+  if (sessionClock) clearInterval(sessionClock);
+  if (questionClock) clearInterval(questionClock);
+  if (countdownInterval) clearInterval(countdownInterval);
+}
+
+//overlay
 
 function holdStart() {
   isHolding = true;
@@ -281,22 +341,6 @@ function enableOverlayInteractions() {
     overlay.addEventListener("mouseenter", holdStart);
     overlay.addEventListener("mouseleave", holdEnd);
   }
-}
-
-enableOverlayInteractions();
-
-function msToTime(milliseconds) {
-  const minutes = Math.floor(milliseconds / 60000);
-  const seconds = Math.floor((milliseconds % 60000) / 1000);
-
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-}
-
-function msToSeconds(milliseconds) {
-  const seconds = Math.floor(milliseconds / 1000);
-  const centiseconds = Math.floor((milliseconds % 1000) / 10);
-
-  return `${String(seconds).padStart(2, "0")}:${String(centiseconds).padStart(2, "0")}`;
 }
 
 function showMeaning(card, speedAvg, onDone) {
@@ -342,9 +386,7 @@ function finishOverlay() {
   pendingNext = null;
 }
 
-function getInputOffset() {
-  return LEARNING_RULES.inputOffsets[INPUT_TYPE] ?? 0;
-}
+enableOverlayInteractions();
 
 // function getPromotionThreshold() {
 //   return LEARNING_RULES.promotion.requiredLevelStreak;
@@ -352,10 +394,6 @@ function getInputOffset() {
 // function getPromotionThresholdNew(card) {
 //   return LEARNING_RULES.stageSettings[card.word_status].maxLevel;
 // }
-
-function getDiffArrowPosition(card) {
-  return LEARNING_RULES.diffLevels[card.diff];
-}
 
 function rememberShownWord(card) {
   recentWordIds.push(card.id);
@@ -369,10 +407,7 @@ function rememberShownWord(card) {
 //   return !["new", "unknown", "recognized"].includes(card.word_status);
 // }
 
-function getCountdownDuration(card) {
-  const step = getStageStep(card);
-  return step ? step.countdown * 1000 + getInputOffset() : 0;
-}
+//main app logic
 
 function chooseQuestion() {
   chosenCard = null;
@@ -438,6 +473,13 @@ function chooseQuestion() {
 function renderQuestionText(card) {
   qText.textContent = roundState.roundFlip ? card.answer : card.question;
 }
+
+function renderQuestion(card) {
+  if (!card) return;
+  renderQuestionText(card);
+  updateWordStats(card);
+}
+
 function updateWordStats(card) {
   levelText.textContent = LEARNING_RULES.stageSettings[card.wordLevel].status;
   difArrow.style.left = `${getDiffArrowPosition(card)}%`;
@@ -447,12 +489,6 @@ function updateWordStats(card) {
     starsFill.classList.remove("animate-fill");
   }
   starsFill.style.setProperty("--fill", `${getStarsFillNew(card)}%`);
-}
-
-function renderQuestion(card) {
-  if (!card) return;
-  renderQuestionText(card);
-  updateWordStats(card);
 }
 
 function showAnswers(card) {
@@ -543,17 +579,6 @@ function pickQuestionAndAnswers() {
   }
 }
 
-list.addEventListener("change", (e) => {
-  if (e.target.name === "answer") {
-    if (roundState.firstTry) {
-      submitMainBtn.classList.add("hidden");
-      knowOrGuess.classList.remove("hidden");
-    } else {
-      submitMainBtn.classList.remove("inactive");
-    }
-  }
-});
-
 function updateAccuracy(card) {
   card.accuracy = card.engaged > 0 ? card.rightAnswers / card.engaged : 0;
 }
@@ -564,7 +589,8 @@ function promoteCard(card) {
 
   card.levelStreak = 0;
   if (card.wordLevel === 0) {
-    card.wordLevel = Math.min(card.wordLevel + 2, maxLevel);
+    card.wordLevel = 2;
+    // card.wordLevel = Math.min(card.wordLevel + 2, maxLevel);
   } else {
     card.wordLevel = Math.min(card.wordLevel + 1, maxLevel);
   }
@@ -581,60 +607,43 @@ function demoteCard(card) {
   console.log(LEARNING_RULES.stageSettings[card.wordLevel].label);
 }
 
-function getTriesMessage(tries) {
-  if (tries === 1) return "טעות ראשונה";
-  if (tries === 2) return "טעות שנייה";
-  if (tries === 3) return "טעות שלישית";
-  // if (tries === 4) return "טעות רביעית";
-  return `טעות מספר ${tries}`;
+function handleAnswerOutcome(card, selected, result) {
+  const { correctAns, answerCategory } = result;
+  roundState.timeOut = result.didTimeout;
+
+  showMsg(getMessage(answerCategory, roundState.currentTries));
+
+  if (correctAns) {
+    const speedAvg = getAvgSpeedFromRecalls(card, 5);
+    handleCorrectAnswer(card, answerCategory, speedAvg);
+  } else {
+    dimAnswer(selected);
+    handleWrongAnswer(card, answerCategory);
+    resetSubmitButtons();
+  }
 }
 
-function applyCorrectScore() {
-  if (roundState.currentTries === 1) {
-    globalScore += 100;
-  } else if (roundState.currentTries === 2) {
-    globalScore += 60;
-  } else {
-    globalScore += 20;
+function handleCorrectAnswer(card, category, speedAvg) {
+  applyCorrectFeedbackStyles(category);
+  runCorrectAnswerFlow(card, category, speedAvg);
+}
+
+function runCorrectAnswerFlow(card, category, speedAvg) {
+  if (roundState.firstTry) {
+    handleFirstTryCorrect(card, category, speedAvg);
   }
 
-  const bonuses = LEARNING_RULES.scoring.streakBonuses;
+  applyCorrectScore();
+  renderStats();
+  stopQuestionTimers();
 
-  bonuses.forEach(({ streak, type, value }) => {
-    if (globalStreak === streak) {
-      if (type === "add") globalScore += value;
-      if (type === "mult") globalScore *= value;
-    }
+  showMeaning(card, speedAvg, () => {
+    finalizeCorrectFeedbackUI();
+    resetState();
   });
 }
 
-function checkLevelBoost(card) {
-  const correctCount = card.firstAnswersHistory.filter(
-    (answer) =>
-      answer === ANSWERS_CATEGORIES.FIRST_CORRECT ||
-      answer === ANSWERS_CATEGORIES.FAST_CORRECT,
-  ).length;
-  const fastCount = card.firstAnswersHistory.filter(
-    (answer) => answer === ANSWERS_CATEGORIES.FAST_CORRECT,
-  ).length;
-
-  const boostRules = LEARNING_RULES.boost.earlyLevelBoost;
-
-  if (
-    card.engaged === boostRules.requiredEngaged &&
-    correctCount === boostRules.requiredCorrect &&
-    fastCount >= boostRules.requiredFast
-  ) {
-    console.log("LEVEL BOOST");
-    return true;
-  }
-}
-
 function handleFirstTryCorrect(card, category) {
-  // if (card.word_status === "mastered" && timeOut) {
-  //   card.levelStreak = 0;
-  // }
-
   if (checkLevelBoost(card)) card.levelStreak += 1;
 
   if (
@@ -659,6 +668,9 @@ function handleFirstTryCorrect(card, category) {
   } else if (category === ANSWERS_CATEGORIES.CORRECT_GUESS) {
     correctGuesses += 1;
     totalGuesses += 1;
+    if (card.engaged === 1) {
+      card.wordLevel = 1;
+    }
   }
 
   card.rightAnswers += 1;
@@ -699,6 +711,132 @@ function handleFirstTryWrong(card, category) {
   saveProgress();
 }
 
+function handleWrongAnswer(card, category) {
+  applyWrongAnswerPenalty(card, category);
+  restoreRetryUI();
+
+  setTimeout(() => {
+    resetWrongFeedbackUI();
+  }, 1000);
+}
+
+function applyCooldown(card, category) {
+  const cooldown = calculateCooldown(card, category);
+
+  card.coolDown = cooldown;
+  card.cooldownUntil = Date.now() + cooldown;
+
+  saveProgress();
+}
+
+function applyWrongAnswerPenalty(card, category) {
+  globalStreak = 0;
+  card.wordStreak = 0;
+  renderStats();
+
+  if (roundState.firstTry) {
+    handleFirstTryWrong(card, category);
+  } else {
+    card.wrongTries += 1;
+    saveProgress();
+  }
+}
+
+function checkLevelBoost(card) {
+  const correctCount = card.firstAnswersHistory.filter(
+    (answer) =>
+      answer === ANSWERS_CATEGORIES.FIRST_CORRECT ||
+      answer === ANSWERS_CATEGORIES.FAST_CORRECT,
+  ).length;
+  const fastCount = card.firstAnswersHistory.filter(
+    (answer) => answer === ANSWERS_CATEGORIES.FAST_CORRECT,
+  ).length;
+
+  const boostRules = LEARNING_RULES.boost.earlyLevelBoost;
+
+  if (
+    card.engaged === boostRules.requiredEngaged &&
+    correctCount === boostRules.requiredCorrect &&
+    fastCount >= boostRules.requiredFast
+  ) {
+    console.log("LEVEL BOOST");
+    return true;
+  }
+}
+
+function getAnswerResult(card, selected, mode) {
+  const key = roundState.roundFlip ? "question" : "answer";
+  const correctAns = selected.value === card[key];
+  const duration = Math.min(performance.now() - questionStartTime, 20000);
+  // const asnwerTime = blindRound
+  //   ? duration -
+  //     (getCountdownDuration(card) -
+  //       LEARNING_RULES.stageSettings[card.wordLevel].blindTimeToAnswer)
+  //   : duration;
+
+  // console.log(duration, asnwerTime);
+
+  updateCountdownProgress(card, duration);
+
+  const didTimeout = roundState.firstTry
+    ? duration >= getCountdownDuration(card)
+    : false;
+
+  const answerCategory = evaluateAnswer(correctAns, mode, duration, didTimeout);
+
+  return {
+    correctAns,
+    duration,
+    answerCategory,
+    didTimeout,
+  };
+}
+
+function applyAnswerState(card, result, mode) {
+  const { correctAns, duration, answerCategory } = result;
+
+  if (!isWrongCategory(answerCategory)) {
+    card.recalls.push({ [answerCategory]: Math.floor(duration) });
+  }
+
+  saveSessionStats(card, answerCategory, duration, roundState.firstTry);
+
+  roundState.submitted = true;
+
+  if (roundState.firstTry) {
+    card.engaged += 1;
+    totalQs += 1;
+    calcScore(correctAns, mode, duration, card);
+    updateFeedbackGrid(answerCategory);
+    card.firstAnswersHistory.push(answerCategory);
+    console.log(card);
+  }
+
+  roundState.currentTries++;
+
+  // const fastStreakCount = countFastStreak(card);
+  applyCooldown(card, answerCategory);
+}
+
+function applyCorrectScore() {
+  if (roundState.currentTries === 1) {
+    globalScore += 100;
+  } else if (roundState.currentTries === 2) {
+    globalScore += 60;
+  } else {
+    globalScore += 20;
+  }
+
+  const bonuses = LEARNING_RULES.scoring.streakBonuses;
+
+  bonuses.forEach(({ streak, type, value }) => {
+    if (globalStreak === streak) {
+      if (type === "add") globalScore += value;
+      if (type === "mult") globalScore *= value;
+    }
+  });
+}
+
 function getMessage(category, currentTries) {
   const message = Messages[category];
   return typeof message === "function" ? message(currentTries) : message;
@@ -708,20 +846,6 @@ function showMsg(text) {
   bubble.classList.remove("invisible");
   feedback.textContent = text;
 }
-
-const Messages = {
-  [ANSWERS_CATEGORIES.FAST_CORRECT]: "וואו! זה היה מהיר!",
-  [ANSWERS_CATEGORIES.LATE_CORRECT]: "תשובה נכונה אבל מאוחר מדי",
-  [ANSWERS_CATEGORIES.SLOW_CORRECT]: "תשובה נכונה אבל טיפה לאט ",
-  [ANSWERS_CATEGORIES.FIRST_CORRECT]: "כל הכבוד! תשובה נכונה",
-  [ANSWERS_CATEGORIES.CORRECT_GUESS]: "יפה. ניחוש מוצלח",
-  [ANSWERS_CATEGORIES.RECOVERY_CORRECT]: "הפעם הצלחת",
-  [ANSWERS_CATEGORIES.WRONG.STRONG_WRONG]: (currentTries) =>
-    `${getTriesMessage(currentTries)} נסה שוב`,
-  [ANSWERS_CATEGORIES.WRONG.WRONG_ANSWER]: (currentTries) =>
-    `${getTriesMessage(currentTries)} נסה שוב`,
-  [ANSWERS_CATEGORIES.WRONG.WRONG_GUESS]: "ניחוש לא מוצלח. נסו שוב...",
-};
 
 function scheduleCorrectFeedbackReset() {
   clearTimeout(correctFeedbackTimeout);
@@ -757,48 +881,15 @@ function stopQuestionTimers() {
   if (questionClock) clearInterval(questionClock);
 }
 
-function runCorrectAnswerFlow(card, category, speedAvg) {
-  if (roundState.firstTry) {
-    handleFirstTryCorrect(card, category, speedAvg);
-  }
-
-  applyCorrectScore();
-  renderStats();
-  stopQuestionTimers();
-
-  showMeaning(card, speedAvg, () => {
-    finalizeCorrectFeedbackUI();
-    resetState();
-  });
-}
-
 function resetWrongFeedbackUI() {
   bubble.classList.add("invisible");
   feedbackBg.classList.remove("wrong_bg");
   feedback.textContent = "";
 }
 
-function applyWrongAnswerPenalty(card, category) {
-  globalStreak = 0;
-  card.wordStreak = 0;
-  renderStats();
-
-  if (roundState.firstTry) {
-    handleFirstTryWrong(card, category);
-  } else {
-    card.wrongTries += 1;
-    saveProgress();
-  }
-}
-
 function restoreRetryUI() {
   knowOrGuess.classList.add("hidden");
   submitMainBtn.classList.remove("hidden");
-}
-
-function handleCorrectAnswer(card, category, speedAvg) {
-  applyCorrectFeedbackStyles(category);
-  runCorrectAnswerFlow(card, category, speedAvg);
 }
 
 function dimAnswer(selection) {
@@ -811,93 +902,6 @@ function dimAnswer(selection) {
 
   selection.disabled = true;
   selection.checked = false;
-}
-
-function handleWrongAnswer(card, category) {
-  applyWrongAnswerPenalty(card, category);
-  restoreRetryUI();
-
-  setTimeout(() => {
-    resetWrongFeedbackUI();
-  }, 1000);
-}
-
-// function countFastStreak(card) {
-//   let streakCount = 0;
-//   for (
-//     let i = card.firstAnswersHistory.length - 1;
-//     i >= 0 && card.firstAnswersHistory[i] === ANSWERS_CATEGORIES.FAST_CORRECT;
-//     i--
-//   ) {
-//     streakCount++;
-//   }
-//   return streakCount;
-// }
-
-// function calcFastStreakMult(fastStreakCount, boostThreshold) {
-//   const mult = 1.5;
-//   if (fastStreakCount < boostThreshold) return 1;
-//   return fastStreakCount * mult;
-// }
-
-// function applyCooldown(card, category) {
-//   let cooldown = card.coolDown ?? LEARNING_RULES.cooldowns.defaultMs;
-//   console.log("cooldown before", cooldown / 1000);
-
-//   // const inputOffset = getInputOffset();
-
-//   // const speedMult =
-//   //   timeToAnswer < LEARNING_RULES.speedThresholds.fastMs + inputOffset
-//   //     ? LEARNING_RULES.cooldown.SPEED_MULTIPLIERS.under2s
-//   //     : timeToAnswer < LEARNING_RULES.speedThresholds.mediumMs + inputOffset
-//   //       ? LEARNING_RULES.cooldown.SPEED_MULTIPLIERS.under4s
-//   //       : LEARNING_RULES.cooldown.SPEED_MULTIPLIERS.normal;
-
-//   const cooldownMultiplier =
-//     LEARNING_RULES.cooldowns.multipliers[category] ?? 1;
-
-//   const earlyBoost = checkLevelBoost(card) ? 3 : 1;
-
-//   // const streakCooldownMult = calcFastStreakMult(fastStreakCount, 3);
-
-//   cooldown *= cooldownMultiplier * earlyBoost;
-//   // if (category === ANSWERS_CATEGORIES.FIRST_CORRECT) {
-//   //   cooldown *= LEARNING_RULES.cooldown.CORRECT_MULTIPLIERS.know * speedMult;
-//   // } else if (category === ANSWERS_CATEGORIES.CORRECT_GUESS) {
-//   //   cooldown *= LEARNING_RULES.cooldown.CORRECT_MULTIPLIERS.guess;
-//   // } else if (category === ANSWERS_CATEGORIES.WRONG_GUESS) {
-//   //   cooldown *= LEARNING_RULES.cooldown.WRONG_MULTIPLIERS.guess;
-//   // } else if (category === ANSWERS_CATEGORIES.WRONG.STRONG_WRONG) {
-//   //   cooldown *= LEARNING_RULES.cooldown.WRONG_MULTIPLIERS.know;
-//   // } else if (category === ANSWERS_CATEGORIES.WRONG.WRONG_ANSWER && tries > 2) {
-//   //   cooldown *= LEARNING_RULES.cooldown.WRONG_MULTIPLIERS.multFails;
-//   // }
-
-//   cooldown = Math.max(
-//     LEARNING_RULES.cooldowns.minMs,
-//     Math.min(LEARNING_RULES.cooldowns.maxMs, cooldown),
-//   );
-//   const cooldownInSec = cooldown / 1000;
-//   console.log(
-//     "mult",
-//     cooldownMultiplier,
-//     "earlyBoost",
-//     earlyBoost,
-//     "after",
-//     cooldownInSec,
-//   );
-//   card.coolDown = cooldown;
-//   card.cooldownUntil = Date.now() + cooldown;
-//   saveProgress();
-// }
-
-function applyCooldown(card, category) {
-  const cooldown = calculateCooldown(card, category);
-
-  card.coolDown = cooldown;
-  card.cooldownUntil = Date.now() + cooldown;
-
-  saveProgress();
 }
 
 function calcScore(correctAns, mode, duration, card) {
@@ -982,100 +986,6 @@ function showAnswersCircles(card) {
   });
 }
 
-// function evaluateAnswer(correctAns, mode, duration, didTimeout) {
-//   if (
-//     correctAns &&
-//     !didTimeout &&
-//     mode === "know" &&
-//     duration < LEARNING_RULES.speedThresholds.quickMs + getInputOffset()
-//   )
-//     return ANSWERS_CATEGORIES.FAST_CORRECT;
-//   else if (
-//     correctAns &&
-//     !didTimeout &&
-//     mode === "know" &&
-//     duration > LEARNING_RULES.speedThresholds.slowMs + getInputOffset()
-//   )
-//     return ANSWERS_CATEGORIES.SLOW_CORRECT;
-//   else if (
-//     correctAns &&
-//     !didTimeout &&
-//     mode === "know" &&
-//     duration >= LEARNING_RULES.speedThresholds.quickMs + getInputOffset()
-//   )
-//     return ANSWERS_CATEGORIES.FIRST_CORRECT;
-//   else if (correctAns && mode === "main")
-//     return ANSWERS_CATEGORIES.RECOVERY_CORRECT;
-//   else if (correctAns && mode === "guess")
-//     return ANSWERS_CATEGORIES.CORRECT_GUESS;
-//   else if (correctAns && didTimeout && mode === "know")
-//     return ANSWERS_CATEGORIES.LATE_CORRECT;
-//   else if (!correctAns && mode === "guess")
-//     return ANSWERS_CATEGORIES.WRONG.WRONG_GUESS;
-//   else if (!correctAns && mode === "know")
-//     return ANSWERS_CATEGORIES.WRONG.STRONG_WRONG;
-//   else if (!correctAns && mode === "main")
-//     return ANSWERS_CATEGORIES.WRONG.WRONG_ANSWER;
-// }
-
-function evaluateAnswer(correctAns, mode, duration, didTimeout) {
-  const offset = getInputOffset();
-  const isKnow = mode === "know";
-  const isGuess = mode === "guess";
-  const isMain = mode === "main";
-
-  const isFast = duration < LEARNING_RULES.speedThresholds.quickMs + offset;
-  const isSlow = duration > LEARNING_RULES.speedThresholds.slowMs + offset;
-
-  // ✅ CORRECT ANSWERS
-  if (correctAns) {
-    if (isKnow && !didTimeout) {
-      if (isFast) return ANSWERS_CATEGORIES.FAST_CORRECT;
-      if (isSlow) return ANSWERS_CATEGORIES.SLOW_CORRECT;
-      return ANSWERS_CATEGORIES.FIRST_CORRECT;
-    }
-
-    if (isKnow && didTimeout) {
-      return ANSWERS_CATEGORIES.LATE_CORRECT;
-    }
-
-    if (isMain) {
-      return ANSWERS_CATEGORIES.RECOVERY_CORRECT;
-    }
-
-    if (isGuess) {
-      return ANSWERS_CATEGORIES.CORRECT_GUESS;
-    }
-  }
-
-  // ❌ WRONG ANSWERS
-  if (!correctAns) {
-    if (isGuess) return ANSWERS_CATEGORIES.WRONG.WRONG_GUESS;
-    if (isKnow) return ANSWERS_CATEGORIES.WRONG.STRONG_WRONG;
-    if (isMain) return ANSWERS_CATEGORIES.WRONG.WRONG_ANSWER;
-  }
-}
-
-function getAvgSpeedFromRecalls(card, numOfRecalls) {
-  const lastXrecalls = card.recalls.slice(-numOfRecalls);
-  console.log(lastXrecalls);
-  let speedAvg = null;
-
-  if (lastXrecalls.length) {
-    if (lastXrecalls.length === 1) {
-      speedAvg = Object.values(lastXrecalls[0]);
-      console.log(speedAvg[0]);
-      return speedAvg[0];
-    } else {
-      const sum = lastXrecalls.reduce((sum, obj) => {
-        return sum + Object.values(obj)[0];
-      }, 0);
-      speedAvg = sum / lastXrecalls.length;
-    }
-  }
-  return speedAvg;
-}
-
 function getSelectedAnswer() {
   return document.querySelector('input[name="answer"]:checked');
 }
@@ -1098,58 +1008,6 @@ function updateCountdownProgress(card, duration) {
   }
 }
 
-function getAnswerResult(card, selected, mode) {
-  const key = roundState.roundFlip ? "question" : "answer";
-  const correctAns = selected.value === card[key];
-  const duration = Math.min(performance.now() - questionStartTime, 20000);
-  // const asnwerTime = blindRound
-  //   ? duration -
-  //     (getCountdownDuration(card) -
-  //       LEARNING_RULES.stageSettings[card.wordLevel].blindTimeToAnswer)
-  //   : duration;
-
-  // console.log(duration, asnwerTime);
-
-  updateCountdownProgress(card, duration);
-
-  const didTimeout = roundState.firstTry
-    ? duration >= getCountdownDuration(card)
-    : false;
-
-  const answerCategory = evaluateAnswer(correctAns, mode, duration, didTimeout);
-
-  return {
-    correctAns,
-    duration,
-    answerCategory,
-    didTimeout,
-  };
-}
-
-function applyAnswerState(card, result, mode) {
-  const { correctAns, duration, answerCategory } = result;
-
-  if (!isWrongCategory(answerCategory)) {
-    card.recalls.push({ [answerCategory]: Math.floor(duration) });
-  }
-
-  roundState.submitted = true;
-
-  if (roundState.firstTry) {
-    card.engaged += 1;
-    totalQs += 1;
-    calcScore(correctAns, mode, duration, card);
-    updateFeedbackGrid(answerCategory);
-    card.firstAnswersHistory.push(answerCategory);
-    console.log(card);
-  }
-
-  roundState.currentTries++;
-
-  // const fastStreakCount = countFastStreak(card);
-  applyCooldown(card, answerCategory);
-}
-
 // function finalizeTimeoutState(result) {
 //   if (firstTry && countdownRound) {
 //     timeOut = result.didTimeout;
@@ -1163,59 +1021,8 @@ function resetSubmitButtons() {
   });
 }
 
-function handleAnswerOutcome(card, selected, result) {
-  const { correctAns, answerCategory } = result;
-  roundState.timeOut = result.didTimeout;
-
-  showMsg(getMessage(answerCategory, roundState.currentTries));
-
-  if (correctAns) {
-    const speedAvg = getAvgSpeedFromRecalls(card, 5);
-    handleCorrectAnswer(card, answerCategory, speedAvg);
-  } else {
-    dimAnswer(selected);
-    handleWrongAnswer(card, answerCategory);
-    resetSubmitButtons();
-  }
-}
-
-function onSubmit(e) {
-  e.preventDefault();
-  const card = chosenCard;
-  const button = e.currentTarget;
-
-  if (roundState.btnDisabled) return;
-  roundState.btnDisabled = true;
-
-  const mode = button.dataset.mode;
-  const selected = getSelectedAnswer();
-
-  if (!selected) {
-    showNoSelectionMessage();
-    return;
-  }
-
-  const result = getAnswerResult(card, selected, mode);
-
-  applyAnswerState(card, result, mode);
-  handleAnswerOutcome(card, selected, result);
-}
-
 function startQuestionTimer() {
   questionStartTime = performance.now();
-
-  // function tick() {
-  //   const elapsedMs = performance.now() - questionStartTime;
-  //   const seconds = String(Math.floor(elapsedMs / 1000)).padStart(2, "0");
-  //   const centiseconds = String(Math.floor(elapsedMs / 10) % 100).padStart(
-  //     2,
-  //     "0",
-  //   );
-  //   questionTimer.textContent = `${seconds}:${centiseconds}`;
-  // }
-
-  // tick();
-  // questionClock = setInterval(tick, 100);
 }
 
 function startSessionTimer() {
@@ -1271,6 +1078,79 @@ function startCountDown(card) {
 
   tick();
   countdownInterval = setInterval(tick, 50);
+}
+
+function startBlindPhase(card, onDone) {
+  const blindMs = getBlindDuration(card);
+
+  countdownCon.style.display = "block";
+  setBlindCircleProgress(0);
+
+  list.style.opacity = "0";
+  list.style.pointerEvents = "none";
+
+  blindRecallLogo.classList.remove("hidden");
+  blindCounter.classList.remove("hidden");
+
+  if (flashEye) clearInterval(flashEye);
+  if (blindRevealTimeout) clearTimeout(blindRevealTimeout);
+  if (countdownInterval) clearInterval(countdownInterval);
+
+  flashEye = setInterval(() => {
+    // blindRecallLogo.classList.toggle("hidden");
+  }, 500);
+
+  const blindStart = performance.now();
+
+  function tick() {
+    const elapsed = performance.now() - blindStart;
+    const progress = Math.min(elapsed / blindMs, 1);
+
+    setBlindCircleProgress(progress);
+
+    if (progress >= 1) {
+      clearInterval(countdownInterval);
+      clearInterval(flashEye);
+
+      blindRecallLogo.classList.add("hidden");
+      blindCounter.classList.add("hidden");
+      list.style.opacity = "1";
+      list.style.pointerEvents = "auto";
+
+      setBlindCircleProgress(0); // reset to full for next blind round
+      onDone();
+    }
+  }
+
+  tick();
+  countdownInterval = setInterval(tick, 50);
+}
+
+function setBlindCircleProgress(progress) {
+  const offset = circumference * progress;
+  circle.style.strokeDashoffset = `${offset}`;
+}
+
+function onSubmit(e) {
+  e.preventDefault();
+  const card = chosenCard;
+  const button = e.currentTarget;
+
+  if (roundState.btnDisabled) return;
+  roundState.btnDisabled = true;
+
+  const mode = button.dataset.mode;
+  const selected = getSelectedAnswer();
+
+  if (!selected) {
+    showNoSelectionMessage();
+    return;
+  }
+
+  const result = getAnswerResult(card, selected, mode);
+
+  applyAnswerState(card, result, mode);
+  handleAnswerOutcome(card, selected, result);
 }
 
 function resetState() {
@@ -1341,140 +1221,25 @@ function resetState() {
   // }
 }
 
-function getBlindDuration(card) {
-  return LEARNING_RULES.stageSettings[card.wordLevel].blindTime ?? 0;
-}
+function startApp() {
+  // startBtn.style.display = "none";
+  if (sessionClock) clearInterval(sessionClock);
+  sessionTimer.textContent = "00:00";
+  currentSession = new Map();
+  currentSessionArr = [];
+  currentSessionStats = new Map();
 
-// function blindRecall(card) {
-//   const totalCountdownMs = getCountdownDuration(card);
-
-//   const inputOffset = getInputOffset();
-//   const revealBeforeEnd =
-//     (LEARNING_RULES.stageSettings[card.wordLevel].blindTimeToAnswer ?? 2000) +
-//     inputOffset;
-
-//   const revealAtMs = Math.max(0, totalCountdownMs - revealBeforeEnd);
-
-//   list.style.opacity = "0";
-//   list.style.pointerEvents = "none";
-
-//   flashEye = setInterval(() => {
-//     blindRecallLogo.classList.toggle("hidden");
-//   }, 500);
-
-//   blindRevealTimeout = setTimeout(() => {
-//     clearInterval(flashEye);
-//     blindRecallLogo.classList.add("hidden");
-//     list.style.opacity = "1";
-//     list.style.pointerEvents = "auto";
-//   }, revealAtMs);
-// }
-
-// function startBlindPhase(card, onDone) {
-//   const blindMs = getBlindDuration(card);
-
-//   countdownCon.style.display = "block";
-//   countdown.style.width = "100%";
-
-//   list.style.opacity = "0";
-//   list.style.pointerEvents = "none";
-
-//   blindRecallLogo.classList.remove("hidden");
-
-//   if (flashEye) clearInterval(flashEye);
-//   if (blindRevealTimeout) clearTimeout(blindRevealTimeout);
-//   if (countdownInterval) clearInterval(countdownInterval);
-
-//   flashEye = setInterval(() => {
-//     blindRecallLogo.classList.toggle("hidden");
-//   }, 500);
-
-//   const blindStart = performance.now();
-
-//   function tick() {
-//     const elapsed = performance.now() - blindStart;
-//     const progress = Math.min(elapsed / blindMs, 1);
-//     const width = 100 * (1 - progress);
-
-//     countdown.style.width = `${width}%`;
-
-//     if (progress >= 1) {
-//       clearInterval(countdownInterval);
-//       clearInterval(flashEye);
-
-//       blindRecallLogo.classList.add("hidden");
-//       list.style.opacity = "1";
-//       list.style.pointerEvents = "auto";
-
-//       countdown.style.width = "100%"; // reset bar for main countdown
-//       onDone();
-//     }
-//   }
-
-//   tick();
-//   countdownInterval = setInterval(tick, 50);
-// }
-
-function startBlindPhase(card, onDone) {
-  const blindMs = getBlindDuration(card);
-
-  countdownCon.style.display = "block";
-  setBlindCircleProgress(0);
-
-  list.style.opacity = "0";
-  list.style.pointerEvents = "none";
-
-  blindRecallLogo.classList.remove("hidden");
-  blindCounter.classList.remove("hidden");
-
-  if (flashEye) clearInterval(flashEye);
-  if (blindRevealTimeout) clearTimeout(blindRevealTimeout);
-  if (countdownInterval) clearInterval(countdownInterval);
-
-  flashEye = setInterval(() => {
-    // blindRecallLogo.classList.toggle("hidden");
-  }, 500);
-
-  const blindStart = performance.now();
-
-  function tick() {
-    const elapsed = performance.now() - blindStart;
-    const progress = Math.min(elapsed / blindMs, 1);
-
-    setBlindCircleProgress(progress);
-
-    if (progress >= 1) {
-      clearInterval(countdownInterval);
-      clearInterval(flashEye);
-
-      blindRecallLogo.classList.add("hidden");
-      blindCounter.classList.add("hidden");
-      list.style.opacity = "1";
-      list.style.pointerEvents = "auto";
-
-      setBlindCircleProgress(0); // reset to full for next blind round
-      onDone();
-    }
-  }
-
-  tick();
-  countdownInterval = setInterval(tick, 50);
-}
-
-function setBlindCircleProgress(progress) {
-  const offset = circumference * progress;
-  circle.style.strokeDashoffset = `${offset}`;
-}
-
-function animatePop(el) {
-  el.classList.remove("pop");
-  void el.offsetWidth; // force reflow
-  el.classList.add("pop");
+  feedGrid.textContent = "";
+  loadProgress();
+  resetState();
+  renderStats();
+  startSessionTimer();
 }
 
 function updateUI() {
-  console.log(currentSession);
-  console.log(currentSessionArr);
+  // console.log(currentSession);
+  console.log(currentSessionStats);
+  // console.log(currentSessionArr);
   if (roundState.roundFlip) flipLogo.style.display = "block";
   animatePop(qText);
   knowOrGuess.classList.add("hidden");
@@ -1483,25 +1248,6 @@ function updateUI() {
   submitMainBtn.classList.add("inactive");
 }
 
-function startApp() {
-  startBtn.style.display = "none";
-  if (sessionClock) clearInterval(sessionClock);
-  sessionTimer.textContent = "00:00";
-  currentSession = new Map();
-  currentSessionArr = [];
-  feedGrid.textContent = "";
-  loadProgress();
-  resetState();
-  renderStats();
-  startSessionTimer();
-}
-
-resetbtn.addEventListener("click", resetProgress);
-
-submitButtons.forEach((button) => {
-  button.addEventListener("click", onSubmit);
-});
-
 function removeWord() {
   chosenCard.isRemoved = true;
   chosenCard.inCycle = false;
@@ -1509,57 +1255,54 @@ function removeWord() {
   setTimeout(resetState, 2000);
 }
 
+list.addEventListener("change", (e) => {
+  if (e.target.name === "answer") {
+    if (roundState.firstTry) {
+      submitMainBtn.classList.add("hidden");
+      knowOrGuess.classList.remove("hidden");
+    } else {
+      submitMainBtn.classList.remove("inactive");
+    }
+  }
+});
+
+resetbtn.addEventListener("click", resetProgress);
+
+submitButtons.forEach((button) => {
+  button.addEventListener("click", onSubmit);
+});
+
 removeWordBtn.addEventListener("click", removeWord);
-startBtn.addEventListener("click", startApp);
+// startBtn.addEventListener("click", startApp);
 
-const openEyes = [
-  document.getElementById("eyeL"),
-  document.getElementById("eyeR"),
-  document.getElementById("pupilL"),
-  document.getElementById("pupilR"),
-];
+homeStartBtn.addEventListener("click", () => {
+  navigate("app");
+  startApp();
+});
 
-const closedEyes = [
-  document.getElementById("eyeClosedL"),
-  document.getElementById("eyeClosedR"),
-];
+studyMoreBtn.addEventListener("click", () => {
+  navigate("app");
+  startApp();
+});
 
-function show(elements) {
-  elements.forEach((el) => {
-    if (el) el.style.display = "block";
-  });
+backHomeBtn.addEventListener("click", () => {
+  navigate("home");
+});
+
+endSessionBtn.addEventListener("click", () => {
+  stopSession();
+  renderSummary();
+  navigate("summary");
+});
+
+//ANIMATION
+
+function animatePop(el) {
+  el.classList.remove("pop");
+  void el.offsetWidth; // force reflow
+  el.classList.add("pop");
 }
 
-function hide(elements) {
-  elements.forEach((el) => {
-    if (el) el.style.display = "none";
-  });
-}
+startAnimations();
 
-function blink() {
-  hide(openEyes);
-  show(closedEyes);
-
-  setTimeout(() => {
-    hide(closedEyes);
-    show(openEyes);
-
-    const next = 2000 + Math.random() * 3000;
-    setTimeout(blink, next);
-  }, 120);
-}
-
-setTimeout(blink, 1500);
-
-const pupilL = document.getElementById("pupilL");
-const pupilR = document.getElementById("pupilR");
-
-let lookDir = 1;
-
-setInterval(() => {
-  lookDir *= -1;
-  const x = lookDir * 4;
-
-  pupilL.style.transform = `translateX(${x}px)`;
-  pupilR.style.transform = `translateX(${x}px)`;
-}, 1800);
+navigate("home");
