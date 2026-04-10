@@ -1,6 +1,6 @@
 "use strict";
 
-import { LEARNING_RULES } from "/learningRules.js";
+import { LEARNING_RULES, ANSWERS_CATEGORIES } from "/learningRules.js";
 
 export const INPUT_TYPE = getInputType();
 
@@ -26,4 +26,22 @@ export function getInputType() {
 
 export function getInputOffset() {
   return LEARNING_RULES.inputOffsets[INPUT_TYPE] ?? 0;
+}
+
+export function longestStreak(arr, categories) {
+  const categorySet = new Set(categories);
+
+  let max = 0;
+  let current = 0;
+
+  for (const num of arr) {
+    if (categorySet.has(num)) {
+      current++;
+      if (current > max) max = current;
+    } else {
+      current = 0;
+    }
+  }
+
+  return max;
 }

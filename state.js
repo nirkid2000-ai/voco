@@ -48,3 +48,14 @@ export function createDefaultRoundState() {
     timeOut: false,
   };
 }
+
+export function resetSessioStats() {
+  return {
+    sessionCards: new Map(),
+    sessionStats: {
+      allSessionTimes: [],
+      allSessionAnswers: [],
+      newWords: 0,
+    },
+  };
+}

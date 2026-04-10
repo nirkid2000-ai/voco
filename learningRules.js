@@ -70,7 +70,7 @@ export const LEARNING_RULES = {
       streakThreshold: 1,
       maxLengthDiff: 4,
       0: {
-        countdown: 60,
+        countdown: 10,
         stars: 0,
         flip: false,
         blind: false,
@@ -85,7 +85,7 @@ export const LEARNING_RULES = {
       maxLengthDiff: 4,
 
       0: {
-        countdown: 40,
+        countdown: 10,
         stars: 0,
         flip: false,
         blind: false,
@@ -99,14 +99,14 @@ export const LEARNING_RULES = {
       streakThreshold: 2,
       maxLengthDiff: 3,
       0: {
-        countdown: 30,
+        countdown: 7,
         stars: 9.5,
         flip: false,
         blind: false,
         demoteTo: [1, 0],
       },
       1: {
-        countdown: 10,
+        countdown: 7,
         stars: 20,
         flip: false,
         blind: false,
@@ -120,14 +120,14 @@ export const LEARNING_RULES = {
       streakThreshold: 2,
       maxLengthDiff: 3,
       0: {
-        countdown: 20,
+        countdown: 6,
         stars: 30,
         flip: false,
         blind: false,
         demoteTo: [2, 1],
       },
       1: {
-        countdown: 15,
+        countdown: 6,
         stars: 40,
         flip: false,
         blind: false,
@@ -141,14 +141,14 @@ export const LEARNING_RULES = {
       streakThreshold: 2,
       maxLengthDiff: 2,
       0: {
-        countdown: 15,
+        countdown: 5,
         stars: 50,
         flip: true,
         blind: false,
         demoteTo: [3, 1],
       },
       1: {
-        countdown: 10,
+        countdown: 5,
         stars: 60,
         flip: false,
         blind: false,
@@ -163,14 +163,14 @@ export const LEARNING_RULES = {
       maxLengthDiff: 2,
       blindTime: 5000,
       0: {
-        countdown: 10,
+        countdown: 5,
         stars: 70,
         flip: true,
         blind: false,
         demoteTo: [4, 1],
       },
       1: {
-        countdown: 10,
+        countdown: 5,
         stars: 80,
         flip: false,
         blind: true,
@@ -242,3 +242,10 @@ export const ANSWERS_CATEGORIES = {
     STRONG_WRONG: "strongWrong",
   },
 };
+
+export const CORRECT_CATEGORIES = new Set([
+  ANSWERS_CATEGORIES.FAST_CORRECT,
+  ANSWERS_CATEGORIES.FIRST_CORRECT,
+  ANSWERS_CATEGORIES.SLOW_CORRECT,
+  ANSWERS_CATEGORIES.CORRECT_GUESS,
+]);

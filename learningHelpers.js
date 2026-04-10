@@ -114,6 +114,8 @@ export function calculateCooldown(card, category) {
   );
 }
 
+const WRONG_CATEGORIES = new Set([...Object.values(ANSWERS_CATEGORIES.WRONG)]);
+
 export function isWrongCategory(category) {
-  return Object.values(ANSWERS_CATEGORIES.WRONG).includes(category);
+  return WRONG_CATEGORIES.has(category);
 }

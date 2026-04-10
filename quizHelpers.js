@@ -65,13 +65,11 @@ export function evaluateAnswer(correctAns, mode, duration, didTimeout) {
 
 export function getAvgSpeedFromRecalls(card, numOfRecalls) {
   const lastXrecalls = card.recalls.slice(-numOfRecalls);
-  console.log(lastXrecalls);
   let speedAvg = null;
 
   if (lastXrecalls.length) {
     if (lastXrecalls.length === 1) {
       speedAvg = Object.values(lastXrecalls[0]);
-      console.log(speedAvg[0]);
       return speedAvg[0];
     } else {
       const sum = lastXrecalls.reduce((sum, obj) => {

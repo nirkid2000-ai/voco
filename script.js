@@ -1,5 +1,9 @@
 "use strict";
-import { LEARNING_RULES, ANSWERS_CATEGORIES } from "/learningRules.js";
+import {
+  LEARNING_RULES,
+  ANSWERS_CATEGORIES,
+  CORRECT_CATEGORIES,
+} from "/learningRules.js";
 import {
   shouldFlipNew,
   shouldBlindNew,
@@ -7,11 +11,21 @@ import {
   getStageStep,
   getMaxWordLevel,
   calculateCooldown,
-  isWrongCategory,
+  // isWrongCategory,
 } from "/learningHelpers.js";
-import { createInitialCards, createDefaultRoundState } from "/state.js";
+import {
+  createInitialCards,
+  createDefaultRoundState,
+  resetSessioStats,
+} from "/state.js";
 
-import { msToTime, msToSeconds, getInputOffset, INPUT_TYPE } from "/utils.js";
+import {
+  msToTime,
+  msToSeconds,
+  getInputOffset,
+  INPUT_TYPE,
+  longestStreak,
+} from "/utils.js";
 
 import {
   getDiffArrowPosition,
@@ -176,7 +190,6 @@ function resetProgress() {
   totalQs = 0;
   list.style.display = "flex";
   if (sessionClock) clearInterval(sessionClock);
-  startApp();
 }
 
 let cards = createInitialCards();
@@ -193,9 +206,19 @@ let roundState = {
   submitted: false,
 };
 
+let sessionState = {
+  sessionCards: new Map(),
+  sessionStats: {
+    newWords: 0,
+    allSessionTimes: [],
+    allSessionAnswers: [],
+  },
+};
+
 let chosenCard;
 
-let recentWordIds = [];
+// let recentWordIds = [];
+let recentWordIds = new Set();
 
 let globalStreak = 0;
 let globalScore = 0;
@@ -204,7 +227,7 @@ let totalGuesses = 0;
 let totalCorrect = 0;
 let totalQs = 0;
 
-let currentSession = new Map();
+// let currentSession = new Map();
 let currentSessionArr = [];
 
 let questionStartTime;
@@ -221,24 +244,7 @@ let isHolding = false;
 let pendingNext = null;
 let overlayMinTimeDone = false;
 
-function buildCardsLookup() {
-  cardsById = new Map(cards.map((card) => [card.id, card]));
-  console.log(cardsById);
-}
-
-let currentSessionStats = new Map();
-
-function getSessionCardStats(card) {
-  if (!currentSessionStats.has(card.id)) {
-    currentSessionStats.set(card.id, {
-      id: card.id,
-      engagements: 0,
-      answerCategories: [],
-      recalls: [],
-    });
-  }
-  return currentSessionStats.get(card.id);
-}
+// let currentSessionStats = new Map();
 
 function navigate(screenName) {
   homeScreen.classList.add("hidden");
@@ -258,8 +264,24 @@ function navigate(screenName) {
   }
 }
 
+function buildCardsLookup() {
+  cardsById = new Map(cards.map((card) => [card.id, card]));
+}
+
+function getSessionCardStats(card) {
+  if (!sessionState.sessionCards.has(card.id)) {
+    sessionState.sessionCards.set(card.id, {
+      id: card.id,
+      engagements: 0,
+      firstAnswers: [],
+      recalls: [],
+    });
+  }
+  return sessionState.sessionCards.get(card.id);
+}
+
 function getSessionSummaryFromStats() {
-  const sessionCards = Array.from(currentSessionStats.values());
+  const sessionCards = Array.from(sessionState.sessionCards.values());
 
   return sessionCards.map((sessionCard) => {
     const card = cardsById.get(sessionCard.id);
@@ -282,31 +304,88 @@ function getSessionSummaryFromStats() {
   });
 }
 
-function saveSessionStats(card, answerCategory, duration, isFirstTry) {
+function saveSessionStats(
+  card,
+  answerCategory,
+  duration,
+  isFirstTry,
+  correctAns,
+) {
   const sessionCard = getSessionCardStats(card);
-  console.log(sessionCard);
+  if (card.wordLevel === 0) {
+    sessionState.sessionStats.newWords++;
+  }
 
   if (isFirstTry) {
     sessionCard.engagements += 1;
+    sessionCard.firstAnswers.push(answerCategory);
+    sessionState.sessionStats.allSessionAnswers.push(answerCategory);
   }
 
-  if (!isWrongCategory(answerCategory)) {
+  if (correctAns) {
+    sessionState.sessionStats.allSessionTimes.push(Math.floor(duration));
     sessionCard.recalls.push({
       category: answerCategory,
       time: Math.floor(duration),
     });
   }
+  console.log(
+    sessionCard,
+    sessionState.sessionStats.allSessionTimes,
+    sessionState.sessionStats.allSessionAnswers,
+  );
 }
 
 function renderSummary() {
   const enriched = getSessionSummaryFromStats();
+  const uniqueWords = enriched.length;
+  const unkownWords = enriched.filter((word) => word.wordLevel === 1);
+  const newWords = sessionState.sessionStats.newWords;
+  console.log(enriched);
+  console.log(unkownWords);
 
-  const totalQuestions = enriched.reduce(
-    (sum, item) => item.engagements + sum,
-    0,
+  const totalQuestions = sessionState.sessionStats.allSessionAnswers.length;
+
+  const lateCorrects = sessionState.sessionStats.allSessionAnswers.filter(
+    (category) => category === ANSWERS_CATEGORIES.LATE_CORRECT,
   );
-  console.log(enriched, totalQuestions);
-  summaryCon.textContent = globalScore;
+
+  const correctGuesses = sessionState.sessionStats.allSessionAnswers.filter(
+    (category) => category === ANSWERS_CATEGORIES.CORRECT_GUESS,
+  );
+
+  const avgSessionRecallTime =
+    sessionState.sessionStats.allSessionTimes.length > 0
+      ? sessionState.sessionStats.allSessionTimes.reduce(
+          (sum, recall) => sum + recall,
+          0,
+        ) / sessionState.sessionStats.allSessionTimes.length
+      : 0;
+
+  const avgSessionRecallSeconds = (avgSessionRecallTime / 1000).toFixed(2);
+
+  const longestCorrectStreak = longestStreak(
+    sessionState.sessionStats.allSessionAnswers,
+    CORRECT_CATEGORIES,
+  );
+
+  const totalSessionPassed = sessionState.sessionStats.allSessionAnswers.filter(
+    (category) => CORRECT_CATEGORIES.has(category),
+  ).length;
+
+  const totalSessionNotPassed = totalQuestions - totalSessionPassed;
+
+  summaryCon.innerHTML = `
+  <div>Total Questions: ${totalQuestions}</div>
+  <div>Total Passed: ${totalSessionPassed} (Guesses:${correctGuesses.length})</div>
+  <div>Total Not Passed: ${totalSessionNotPassed} (Wrong:${totalSessionNotPassed - lateCorrects.length}, Late:${lateCorrects.length})</div>
+  <div>Average Answer Time: ${avgSessionRecallSeconds}</div>
+  <div>Longest Streak: ${longestCorrectStreak}</div>
+  <div>Unique Words Practiced: ${uniqueWords}</div>
+  <div>Words improved: ${uniqueWords}</div>
+  <div>New words: ${newWords}</div>
+
+`;
 }
 
 function stopSession() {
@@ -395,13 +474,21 @@ enableOverlayInteractions();
 //   return LEARNING_RULES.stageSettings[card.word_status].maxLevel;
 // }
 
+// function rememberShownWord(card) {
+//   recentWordIds.push(card.id);
+//   if (recentWordIds.length > LEARNING_RULES.minWordGap) {
+//     recentWordIds.shift();
+//   }
+// }
+
 function rememberShownWord(card) {
-  recentWordIds.push(card.id);
-  if (recentWordIds.length > LEARNING_RULES.minWordGap) {
-    recentWordIds.shift();
+  recentWordIds.add(card.id);
+
+  if (recentWordIds.size > LEARNING_RULES.minWordGap) {
+    const first = recentWordIds.values().next().value;
+    recentWordIds.delete(first);
   }
 }
-
 // function shouldCountdown(card) {
 //   return true;
 //   return !["new", "unknown", "recognized"].includes(card.word_status);
@@ -415,7 +502,7 @@ function chooseQuestion() {
 
   const allLiveCards = cards.filter((card) => !card.isRemoved);
   const filteredLiveCards = allLiveCards.filter(
-    (card) => !recentWordIds.includes(card.id),
+    (card) => !recentWordIds.has(card.id),
   );
 
   const liveCards =
@@ -601,9 +688,7 @@ function demoteCard(card) {
   const step = getStageStep(card);
   console.log(LEARNING_RULES.stageSettings[card.wordLevel].label);
   card.wordLevel = step.demoteTo[0];
-  console.log(step.demoteTo[0]);
   card.levelStreak = step.demoteTo[1];
-  console.log(step.demoteTo[1]);
   console.log(LEARNING_RULES.stageSettings[card.wordLevel].label);
 }
 
@@ -680,7 +765,7 @@ function handleFirstTryCorrect(card, category) {
   updateAccuracy(card);
 
   updateWordStats(card);
-  currentSession.set(card.id, card);
+  // sessionState.sessionCards.set(card.id, card);
   currentSessionArr.push(card);
 
   renderStats();
@@ -703,7 +788,7 @@ function handleFirstTryWrong(card, category) {
 
   demoteCard(card);
   updateWordStats(card);
-  currentSession.set(card.id, card);
+  // sessionState.sessionCards.set(card.id, card);
   currentSessionArr.push(card);
 
   renderStats();
@@ -743,14 +828,29 @@ function applyWrongAnswerPenalty(card, category) {
 }
 
 function checkLevelBoost(card) {
-  const correctCount = card.firstAnswersHistory.filter(
-    (answer) =>
+  // const correctCount = card.firstAnswersHistory.filter(
+  //   (answer) =>
+  //     answer === ANSWERS_CATEGORIES.FIRST_CORRECT ||
+  //     answer === ANSWERS_CATEGORIES.FAST_CORRECT,
+  // ).length;
+  // const fastCount = card.firstAnswersHistory.filter(
+  //   (answer) => answer === ANSWERS_CATEGORIES.FAST_CORRECT,
+  // ).length;
+  let correctCount = 0;
+  let fastCount = 0;
+
+  for (const answer of card.firstAnswersHistory) {
+    if (
       answer === ANSWERS_CATEGORIES.FIRST_CORRECT ||
-      answer === ANSWERS_CATEGORIES.FAST_CORRECT,
-  ).length;
-  const fastCount = card.firstAnswersHistory.filter(
-    (answer) => answer === ANSWERS_CATEGORIES.FAST_CORRECT,
-  ).length;
+      answer === ANSWERS_CATEGORIES.FAST_CORRECT
+    ) {
+      correctCount++;
+    }
+
+    if (answer === ANSWERS_CATEGORIES.FAST_CORRECT) {
+      fastCount++;
+    }
+  }
 
   const boostRules = LEARNING_RULES.boost.earlyLevelBoost;
 
@@ -792,24 +892,29 @@ function getAnswerResult(card, selected, mode) {
   };
 }
 
-function applyAnswerState(card, result, mode) {
+function applyAnswerState(card, result) {
   const { correctAns, duration, answerCategory } = result;
 
-  if (!isWrongCategory(answerCategory)) {
+  if (correctAns) {
     card.recalls.push({ [answerCategory]: Math.floor(duration) });
   }
 
-  saveSessionStats(card, answerCategory, duration, roundState.firstTry);
+  saveSessionStats(
+    card,
+    answerCategory,
+    duration,
+    roundState.firstTry,
+    correctAns,
+  );
 
   roundState.submitted = true;
 
   if (roundState.firstTry) {
     card.engaged += 1;
     totalQs += 1;
-    calcScore(correctAns, mode, duration, card);
+    calcScore(correctAns, answerCategory, card);
     updateFeedbackGrid(answerCategory);
     card.firstAnswersHistory.push(answerCategory);
-    console.log(card);
   }
 
   roundState.currentTries++;
@@ -904,35 +1009,33 @@ function dimAnswer(selection) {
   selection.checked = false;
 }
 
-function calcScore(correctAns, mode, duration, card) {
+function calcScore(correctAns, answerCategory, card) {
   let qScore;
   if (!correctAns) {
     qScore = 0;
   } else {
-    const numOptions = list.children.length;
-    const seconds = (duration + getInputOffset()) / 1000;
+    // const numOptions = list.children.length;
+    // const seconds = (duration + getInputOffset()) / 1000;
     // Base difficulty
-    let correctBase =
-      mode === "know"
-        ? numOptions * 1.2 // slightly reduced from 1.5
-        : 3;
-    const timeBonus = Math.max(0, Math.floor(7 - seconds));
+    // let correctBase =
+    //   mode === "know"
+    //     ? numOptions * 1.2 // slightly reduced from 1.5
+    //     : 3;
+    // const timeBonus = Math.max(0, Math.floor(7 - seconds));
+    const categoryScore = 10;
     const flipBonus = roundState.roundFlip ? 3 : 0;
-    const blindBonus = roundState.blindRound ? 9 : 0;
-    qScore = Math.min(
-      20,
-      Math.round(correctBase + timeBonus + flipBonus + blindBonus),
-    );
+    const blindBonus = roundState.blindRound ? 3 : 0;
+    const roundBonus = Math.min(5, flipBonus + blindBonus);
+    qScore = Math.min(20, Math.round(categoryScore + roundBonus + blindBonus));
   }
 
   card.scores.push(qScore);
   if (card.scores.length > 20) card.scores.shift();
 
-  card.last5Scores.push(qScore);
-  if (card.last5Scores.length > 5) card.last5Scores.shift();
+  // card.last5Scores.push(qScore);
+  // if (card.last5Scores.length > 5) card.last5Scores.shift();
 
-  card.recentScore = card.last5Scores.reduce((sum, val) => sum + val, 0);
-  console.log(qScore, card.last5Scores, card.recentScore);
+  // card.recentScore = card.last5Scores.reduce((sum, val) => sum + val, 0);
 }
 
 function updateFeedbackGrid(answerCategory) {
@@ -1185,7 +1288,6 @@ function resetState() {
   });
 
   roundState = createDefaultRoundState();
-
   // roundState.currentTries = 0;
   // roundState.firstTry = true;
   // roundState.roundFlip = false;
@@ -1225,9 +1327,9 @@ function startApp() {
   // startBtn.style.display = "none";
   if (sessionClock) clearInterval(sessionClock);
   sessionTimer.textContent = "00:00";
-  currentSession = new Map();
+  sessionState = resetSessioStats();
   currentSessionArr = [];
-  currentSessionStats = new Map();
+  // currentSessionStats = new Map();
 
   feedGrid.textContent = "";
   loadProgress();
@@ -1238,7 +1340,7 @@ function startApp() {
 
 function updateUI() {
   // console.log(currentSession);
-  console.log(currentSessionStats);
+  // console.log(currentSessionStats);
   // console.log(currentSessionArr);
   if (roundState.roundFlip) flipLogo.style.display = "block";
   animatePop(qText);
@@ -1266,7 +1368,10 @@ list.addEventListener("change", (e) => {
   }
 });
 
-resetbtn.addEventListener("click", resetProgress);
+resetbtn.addEventListener("click", () => {
+  resetProgress();
+  navigate("home");
+});
 
 submitButtons.forEach((button) => {
   button.addEventListener("click", onSubmit);
