@@ -1,14 +1,14 @@
 "use strict";
 
-import data from "/spanish.js";
+import data from "./spanish.js";
 
-import { LEARNING_RULES } from "/learningRules.js";
+import { LEARNING_RULES } from "./learningRules.js";
 
 export function createDefaultProgress() {
   return {
     wordLevel: 0,
     scores: [],
-    last5Scores: [],
+    // last5Scores: [],
     wordScore: 0,
     engaged: 0,
     rightAnswers: 0,
@@ -49,7 +49,7 @@ export function createDefaultRoundState() {
   };
 }
 
-export function resetSessioStats() {
+export function resetSessionStats() {
   return {
     sessionCards: new Map(),
     sessionStats: {

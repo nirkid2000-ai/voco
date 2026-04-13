@@ -206,9 +206,10 @@
   font-size: clamp(36px, 5vw, 48px);
   text-transform: capitalize;
   color: #0066ff;
-  .word {
-    max-width: 100%;
-  }
+}
+
+.word {
+  max-width: 100%;
 }
 
 input[type="radio"] {
@@ -403,7 +404,8 @@ input[type="radio"] {
 
 .correct,
 .slowCorrect,
-.fastCorrect {
+.fastCorrect,
+.veryFastCorrect {
   background-color: rgb(0, 192, 51);
 }
 
@@ -549,49 +551,49 @@ input[type="radio"] {
   width: 160px;
 }
 
-#eyeClosedL,
-#eyeClosedR,
-#eyeBlinkL,
-#eyeBlinkR,
-#eyeHappyL,
-#eyeHappyR {
+.eyeClosedL,
+.eyeClosedR,
+.eyeBlinkL,
+.eyeBlinkR,
+.eyeHappyL,
+.eyeHappyR {
   display: none;
 }
 
-#pupilL,
-#pupilR {
+.pupilL,
+.pupilR {
   transition: transform 0.6s ease;
 }
 
-#wingL,
-#wingR,
-#backwingR,
-#backwingL {
+.wingL,
+.wingR,
+.backwingR,
+.backwingL {
   transition: transform 180ms ease;
   transform-box: fill-box;
 }
 
-#wingL,
-#backwingL {
+.wingL,
+.backwingL {
   transform-origin: 85% 20%;
 }
 
-#wingR,
-#backwingR {
+.wingR,
+.backwingR {
   transform-origin: 15% 20%;
 }
 
-.crow_wrap:hover #wingL {
+.crow_wrap:hover .wingL {
   transform: rotate(40deg);
 }
-.crow_wrap:hover #backwingL {
+.crow_wrap:hover .backwingL {
   transform: rotate(45deg);
 }
 
-.crow_wrap:hover #wingR {
+.crow_wrap:hover .wingR {
   transform: rotate(-40deg);
 }
-.crow_wrap:hover #backwingR {
+.crow_wrap:hover .backwingR {
   transform: rotate(-45deg);
 }
 
@@ -671,4 +673,21 @@ input[type="radio"] {
   align-items: center;
   justify-content: center;
   background: #ebfff6;
+}
+
+.summary_con {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.summary_line {
+  display: flex;
+  align-items: flex-start;
+}
+
+.summary_label {
+  font-size: 18px;
+  text-transform: capitalize;
+  font-weight: bold;
 }

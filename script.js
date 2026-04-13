@@ -3,7 +3,7 @@ import {
   LEARNING_RULES,
   ANSWERS_CATEGORIES,
   CORRECT_CATEGORIES,
-} from "/learningRules.js";
+} from "./learningRules.js";
 import {
   shouldFlipNew,
   shouldBlindNew,
@@ -12,20 +12,20 @@ import {
   getMaxWordLevel,
   calculateCooldown,
   // isWrongCategory,
-} from "/learningHelpers.js";
+} from "./learningHelpers.js";
 import {
   createInitialCards,
   createDefaultRoundState,
-  resetSessioStats,
-} from "/state.js";
+  resetSessionStats,
+} from "./state.js";
 
 import {
   msToTime,
   msToSeconds,
-  getInputOffset,
+  // getInputOffset,
   INPUT_TYPE,
   longestStreak,
-} from "/utils.js";
+} from "./utils.js";
 
 import {
   getDiffArrowPosition,
@@ -33,9 +33,9 @@ import {
   getBlindDuration,
   evaluateAnswer,
   getAvgSpeedFromRecalls,
-} from "/quizHelpers.js";
+} from "./quizHelpers.js";
 
-import { Messages } from "/messages.js";
+// import { Messages } from "/messages.js";
 
 import { startAnimations } from "./animations.js";
 
@@ -50,7 +50,7 @@ const backHomeBtn = document.getElementById("back_home_btn");
 const endSessionBtn = document.getElementById("end_session_btn");
 
 const qText = document.querySelector(".q");
-const levelText = document.querySelector(".word_level");
+const levelText = document.querySelector(".word_status");
 const difArrow = document.querySelector(".arrow");
 const list = document.querySelector(".wordlist");
 const submitMainBtn = document.querySelector(".main_ans");
@@ -102,7 +102,7 @@ function saveProgress() {
       {
         wordLevel: card.wordLevel,
         scores: card.scores,
-        last5Scores: card.last5Scores,
+        // last5Scores: card.last5Scores,
         wordScore: card.wordScore,
         engaged: card.engaged,
         rightAnswers: card.rightAnswers,
@@ -181,6 +181,7 @@ function resetProgress() {
   localStorage.removeItem(STORAGE_KEY);
 
   cards = createInitialCards();
+  buildCardsLookup();
 
   globalScore = 0;
   globalStreak = 0;
@@ -209,7 +210,6 @@ let roundState = {
 let sessionState = {
   sessionCards: new Map(),
   sessionStats: {
-    newWords: 0,
     allSessionTimes: [],
     allSessionAnswers: [],
   },
@@ -244,6 +244,8 @@ let isHolding = false;
 let pendingNext = null;
 let overlayMinTimeDone = false;
 
+let sessionStarted;
+
 // let currentSessionStats = new Map();
 
 function navigate(screenName) {
@@ -273,15 +275,55 @@ function getSessionCardStats(card) {
     sessionState.sessionCards.set(card.id, {
       id: card.id,
       engagements: 0,
+      starterLevel: card.wordLevel,
       firstAnswers: [],
       recalls: [],
+      scores: [],
     });
   }
   return sessionState.sessionCards.get(card.id);
 }
 
+function calculateWordScore(results) {
+  if (!Array.isArray(results) || results.length === 0) {
+    return 0;
+  }
+
+  const MAX_HISTORY = 5;
+  const MAX_RESULT = 20;
+  const SCALE = 100 / MAX_RESULT; // = 5
+
+  const lastResults = results.slice(-MAX_HISTORY);
+
+  const resultsNormalized = lastResults.map((value) => {
+    const num = Number(value);
+    if (Number.isNaN(num)) return 0;
+    return Math.max(0, Math.min(20, num));
+  });
+
+  let weightedSum = 0;
+  let weightSum = 0;
+
+  for (let i = 0; i < resultsNormalized.length; i++) {
+    const weight = (i + 1) ** 1.7;
+    weightedSum += resultsNormalized[i] * weight;
+    weightSum += weight;
+  }
+
+  const weightedAverage = weightedSum / weightSum;
+
+  const confidence = resultsNormalized.length / MAX_HISTORY;
+
+  const finalScore = weightedAverage * SCALE * confidence;
+
+  return Math.round(finalScore);
+}
+
 function getSessionSummaryFromStats() {
   const sessionCards = Array.from(sessionState.sessionCards.values());
+  // const lastCard = sessionCards.at(-1);
+  // if (!lastCard.recalls.at(-1))
+  //   lastCard.recalls.push({ category: "unresolved", time: 5000 });
 
   return sessionCards.map((sessionCard) => {
     const card = cardsById.get(sessionCard.id);
@@ -294,12 +336,27 @@ function getSessionSummaryFromStats() {
 
     const avgRecallSeconds = (avgRecallTime / 1000).toFixed(2);
 
+    const improved = sessionCard.starterLevel < card.wordLevel ? true : false;
+
+    const newWord = sessionCard.starterLevel === 0 ? true : false;
+
+    const learnedNew =
+      sessionCard.starterLevel === 0 && card.wordLevel >= 2 ? true : false;
+
+    const finalScore = calculateWordScore(sessionCard.scores);
+
+    console.log(finalScore);
+
     return {
       ...sessionCard,
       question: card.question,
       answer: card.answer,
       wordLevel: card.wordLevel,
       avgRecallSeconds,
+      newWord,
+      learnedNew,
+      improved,
+      finalScore,
     };
   });
 }
@@ -310,22 +367,21 @@ function saveSessionStats(
   duration,
   isFirstTry,
   correctAns,
+  score,
 ) {
   const sessionCard = getSessionCardStats(card);
-  if (card.wordLevel === 0) {
-    sessionState.sessionStats.newWords++;
-  }
 
   if (isFirstTry) {
     sessionCard.engagements += 1;
-    sessionCard.firstAnswers.push(answerCategory);
-    sessionState.sessionStats.allSessionAnswers.push(answerCategory);
+    sessionCard.firstAnswers.push(answerCategory.label);
+    sessionState.sessionStats.allSessionAnswers.push(answerCategory.label);
+    sessionCard.scores.push(score);
   }
 
   if (correctAns) {
     sessionState.sessionStats.allSessionTimes.push(Math.floor(duration));
     sessionCard.recalls.push({
-      category: answerCategory,
+      category: answerCategory.label,
       time: Math.floor(duration),
     });
   }
@@ -337,21 +393,27 @@ function saveSessionStats(
 }
 
 function renderSummary() {
+  console.log(sessionState.sessionStats.allSessionAnswers);
+  const sessionTimeMs = performance.now() - sessionStartTime;
+  const sessionTime = msToTime(sessionTimeMs);
   const enriched = getSessionSummaryFromStats();
   const uniqueWords = enriched.length;
   const unkownWords = enriched.filter((word) => word.wordLevel === 1);
-  const newWords = sessionState.sessionStats.newWords;
+  const newWords = enriched.filter((word) => word.newWord);
+  const learnedNewWords = enriched.filter((word) => word.learnedNew);
+  const improvedWords = enriched.filter((word) => word.improved);
+
   console.log(enriched);
   console.log(unkownWords);
 
   const totalQuestions = sessionState.sessionStats.allSessionAnswers.length;
 
   const lateCorrects = sessionState.sessionStats.allSessionAnswers.filter(
-    (category) => category === ANSWERS_CATEGORIES.LATE_CORRECT,
+    (category) => category === ANSWERS_CATEGORIES.LATE_CORRECT.label,
   );
 
   const correctGuesses = sessionState.sessionStats.allSessionAnswers.filter(
-    (category) => category === ANSWERS_CATEGORIES.CORRECT_GUESS,
+    (category) => category === ANSWERS_CATEGORIES.CORRECT_GUESS.label,
   );
 
   const avgSessionRecallTime =
@@ -375,16 +437,27 @@ function renderSummary() {
 
   const totalSessionNotPassed = totalQuestions - totalSessionPassed;
 
-  summaryCon.innerHTML = `
-  <div>Total Questions: ${totalQuestions}</div>
-  <div>Total Passed: ${totalSessionPassed} (Guesses:${correctGuesses.length})</div>
-  <div>Total Not Passed: ${totalSessionNotPassed} (Wrong:${totalSessionNotPassed - lateCorrects.length}, Late:${lateCorrects.length})</div>
-  <div>Average Answer Time: ${avgSessionRecallSeconds}</div>
-  <div>Longest Streak: ${longestCorrectStreak}</div>
-  <div>Unique Words Practiced: ${uniqueWords}</div>
-  <div>Words improved: ${uniqueWords}</div>
-  <div>New words: ${newWords}</div>
+  const sortedWordsByScore = [...enriched].sort(
+    (a, b) => b.finalScore - a.finalScore,
+  );
 
+  const strongestWord = sortedWordsByScore[0] ?? null;
+  const weakestWord = sortedWordsByScore.at(-1) ?? null;
+
+  console.log(sortedWordsByScore);
+  summaryCon.innerHTML = `
+   <div class ="summary_line"><div class="summary_label">Total Session Duration:</div><div class="summary_stat"> ${sessionTime}</div></div>
+  <div class ="summary_line"><div class="summary_label">Total Questions Answered:</div><div class="summary_stat"> ${totalQuestions}</div></div>
+  <div class ="summary_line"><div class="summary_label">Total Questions Passed:</div><div class="summary_stat"> ${totalSessionPassed} (Guesses:${correctGuesses.length})</div></div>
+  <div class ="summary_line"><div class="summary_label">Total questions failed:</div><div class="summary_stat"> ${totalSessionNotPassed} (Wrong:${totalSessionNotPassed - lateCorrects.length}, Late:${lateCorrects.length})</div></div>
+  <div class ="summary_line"><div class="summary_label">Average Answer Time:</div><div class="summary_stat"> ${avgSessionRecallSeconds}</div></div>
+  <div class ="summary_line"><div class="summary_label">Longest Correct Streak:</div><div class="summary_stat"> ${longestCorrectStreak}</div></div>
+  <div class ="summary_line"><div class="summary_label">Unique Words Practiced:</div><div class="summary_stat"> ${uniqueWords}</div></div>
+  <div class ="summary_line"><div class="summary_label">Words improved:</div><div class="summary_stat"> ${improvedWords.length}</div></div>
+  <div class ="summary_line"><div class="summary_label">New Words Appeared:</div><div class="summary_stat">${newWords.length} </div></div>
+  <div class ="summary_line"><div class="summary_label">New Words Learned:</div><div class="summary_stat">${learnedNewWords.length} </div></div>
+  <div class ="summary_line"><div class="summary_label">Strongest Word This Session:</div><div class="summary_stat">${strongestWord.question} </div></div>
+  <div class ="summary_line"><div class="summary_label">Weakest Word This Session:</div><div class="summary_stat">${weakestWord.question} </div></div>
 `;
 }
 
@@ -422,6 +495,37 @@ function enableOverlayInteractions() {
   }
 }
 
+// function showMeaning(card, speedAvg, onDone) {
+//   pendingNext = onDone;
+//   overlayMinTimeDone = false;
+//   const answerKey = roundState.roundFlip ? "question" : "answer";
+
+//   showAnswersCircles(card);
+//   overlayWord.textContent = card.question;
+//   overlayText.textContent = card[answerKey];
+//   overlayTime.textContent = `זמן מענה: ${msToSeconds(
+//     Object.values(card.recalls.at(-1))[0],
+//   )} שניות`;
+//   overlayAvg.textContent = `זמן מענה ממוצע: ${msToSeconds(speedAvg)} שניות`;
+//   overlayCooldown.textContent = `זמן קולדאון: ${msToTime(card.coolDown)}`;
+
+//   overlayExample.textContent = LEARNING_RULES.stageSettings[card.wordLevel]
+//     .example
+//     ? card.example || "..."
+//     : "";
+
+//   overlay.classList.add("show");
+
+//   clearTimeout(overlayTimeout);
+//   overlayTimeout = setTimeout(() => {
+//     overlayMinTimeDone = true;
+
+//     if (!isHolding) {
+//       finishOverlay();
+//     }
+//   }, 1000);
+// }
+
 function showMeaning(card, speedAvg, onDone) {
   pendingNext = onDone;
   overlayMinTimeDone = false;
@@ -430,10 +534,13 @@ function showMeaning(card, speedAvg, onDone) {
   showAnswersCircles(card);
   overlayWord.textContent = card.question;
   overlayText.textContent = card[answerKey];
-  overlayTime.textContent = `זמן מענה: ${msToSeconds(
-    Object.values(card.recalls.at(-1))[0],
-  )} שניות`;
-  overlayAvg.textContent = `זמן מענה ממוצע: ${msToSeconds(speedAvg)} שניות`;
+
+  const lastRecall = card.recalls.at(-1);
+  const lastRecallMs = lastRecall ? Object.values(lastRecall)[0] : 0;
+  const avgMs = typeof speedAvg === "number" ? speedAvg : 0;
+
+  overlayTime.textContent = `זמן מענה: ${msToSeconds(lastRecallMs)} שניות`;
+  overlayAvg.textContent = `זמן מענה ממוצע: ${msToSeconds(avgMs)} שניות`;
   overlayCooldown.textContent = `זמן קולדאון: ${msToTime(card.coolDown)}`;
 
   overlayExample.textContent = LEARNING_RULES.stageSettings[card.wordLevel]
@@ -695,13 +802,16 @@ function demoteCard(card) {
 function handleAnswerOutcome(card, selected, result) {
   const { correctAns, answerCategory } = result;
   roundState.timeOut = result.didTimeout;
-
   showMsg(getMessage(answerCategory, roundState.currentTries));
 
   if (correctAns) {
     const speedAvg = getAvgSpeedFromRecalls(card, 5);
     handleCorrectAnswer(card, answerCategory, speedAvg);
+    endSessionBtn.classList.remove("inactive");
+    sessionStarted = true;
   } else {
+    endSessionBtn.classList.add("inactive");
+    sessionStarted = false;
     dimAnswer(selected);
     handleWrongAnswer(card, answerCategory);
     resetSubmitButtons();
@@ -709,7 +819,7 @@ function handleAnswerOutcome(card, selected, result) {
 }
 
 function handleCorrectAnswer(card, category, speedAvg) {
-  applyCorrectFeedbackStyles(category);
+  applyCorrectFeedbackStyles(category.label);
   runCorrectAnswerFlow(card, category, speedAvg);
 }
 
@@ -731,11 +841,13 @@ function runCorrectAnswerFlow(card, category, speedAvg) {
 function handleFirstTryCorrect(card, category) {
   if (checkLevelBoost(card)) card.levelStreak += 1;
 
-  if (
-    category === ANSWERS_CATEGORIES.FIRST_CORRECT ||
-    category === ANSWERS_CATEGORIES.FAST_CORRECT ||
-    category === ANSWERS_CATEGORIES.SLOW_CORRECT
-  ) {
+  if (category.label === ANSWERS_CATEGORIES.CORRECT_GUESS.label) {
+    correctGuesses += 1;
+    totalGuesses += 1;
+    if (card.engaged === 1) {
+      card.wordLevel = 1;
+    }
+  } else if (category.passed) {
     const stage = LEARNING_RULES.stageSettings[card.wordLevel];
     const maxLevel = getMaxWordLevel();
 
@@ -749,12 +861,6 @@ function handleFirstTryCorrect(card, category) {
       if (card.levelStreak >= stage.streakThreshold) {
         promoteCard(card);
       }
-    }
-  } else if (category === ANSWERS_CATEGORIES.CORRECT_GUESS) {
-    correctGuesses += 1;
-    totalGuesses += 1;
-    if (card.engaged === 1) {
-      card.wordLevel = 1;
     }
   }
 
@@ -774,7 +880,7 @@ function handleFirstTryCorrect(card, category) {
 }
 
 function handleFirstTryWrong(card, category) {
-  if (category === ANSWERS_CATEGORIES.WRONG.WRONG_GUESS) {
+  if (category.label === ANSWERS_CATEGORIES.WRONG.WRONG_GUESS.label) {
     totalGuesses += 1;
   }
   roundState.firstTry = false;
@@ -806,7 +912,7 @@ function handleWrongAnswer(card, category) {
 }
 
 function applyCooldown(card, category) {
-  const cooldown = calculateCooldown(card, category);
+  const cooldown = calculateCooldown(card, category.label);
 
   card.coolDown = cooldown;
   card.cooldownUntil = Date.now() + cooldown;
@@ -841,13 +947,14 @@ function checkLevelBoost(card) {
 
   for (const answer of card.firstAnswersHistory) {
     if (
-      answer === ANSWERS_CATEGORIES.FIRST_CORRECT ||
-      answer === ANSWERS_CATEGORIES.FAST_CORRECT
+      answer === ANSWERS_CATEGORIES.FIRST_CORRECT.label ||
+      answer === ANSWERS_CATEGORIES.FAST_CORRECT.label ||
+      answer === ANSWERS_CATEGORIES.VERY_FAST_CORRECT.label
     ) {
       correctCount++;
     }
 
-    if (answer === ANSWERS_CATEGORIES.FAST_CORRECT) {
+    if (answer === ANSWERS_CATEGORIES.FAST_CORRECT.label) {
       fastCount++;
     }
   }
@@ -861,6 +968,8 @@ function checkLevelBoost(card) {
   ) {
     console.log("LEVEL BOOST");
     return true;
+  } else {
+    return false;
   }
 }
 
@@ -894,9 +1003,10 @@ function getAnswerResult(card, selected, mode) {
 
 function applyAnswerState(card, result) {
   const { correctAns, duration, answerCategory } = result;
+  const score = correctAns ? calcScore(answerCategory, card) : 0;
 
   if (correctAns) {
-    card.recalls.push({ [answerCategory]: Math.floor(duration) });
+    card.recalls.push({ [answerCategory.label]: Math.floor(duration) });
   }
 
   saveSessionStats(
@@ -905,6 +1015,7 @@ function applyAnswerState(card, result) {
     duration,
     roundState.firstTry,
     correctAns,
+    score,
   );
 
   roundState.submitted = true;
@@ -912,9 +1023,11 @@ function applyAnswerState(card, result) {
   if (roundState.firstTry) {
     card.engaged += 1;
     totalQs += 1;
-    calcScore(correctAns, answerCategory, card);
-    updateFeedbackGrid(answerCategory);
-    card.firstAnswersHistory.push(answerCategory);
+    updateFeedbackGrid(answerCategory.label);
+
+    card.scores.push(score);
+    if (card.scores.length > 20) card.scores.shift();
+    card.firstAnswersHistory.push(answerCategory.label);
   }
 
   roundState.currentTries++;
@@ -943,7 +1056,7 @@ function applyCorrectScore() {
 }
 
 function getMessage(category, currentTries) {
-  const message = Messages[category];
+  const message = category.msg;
   return typeof message === "function" ? message(currentTries) : message;
 }
 
@@ -963,16 +1076,16 @@ function scheduleCorrectFeedbackReset() {
 }
 
 function applyCorrectFeedbackStyles(category) {
-  if (category === ANSWERS_CATEGORIES.LATE_CORRECT) {
+  if (category === ANSWERS_CATEGORIES.LATE_CORRECT.label) {
     feedbackBg.classList.add("late_bg");
   } else if (
-    category === ANSWERS_CATEGORIES.FIRST_CORRECT ||
-    category === ANSWERS_CATEGORIES.FAST_CORRECT ||
-    category === ANSWERS_CATEGORIES.SLOW_CORRECT ||
-    category === ANSWERS_CATEGORIES.CORRECT_GUESS
+    category === ANSWERS_CATEGORIES.FIRST_CORRECT.label ||
+    category === ANSWERS_CATEGORIES.FAST_CORRECT.label ||
+    category === ANSWERS_CATEGORIES.SLOW_CORRECT.label ||
+    category === ANSWERS_CATEGORIES.CORRECT_GUESS.label
   ) {
     feedbackBg.classList.add("correct_bg");
-  } else if (category === ANSWERS_CATEGORIES.RECOVERY_CORRECT) {
+  } else if (category === ANSWERS_CATEGORIES.RECOVERY_CORRECT.label) {
     feedbackBg.classList.add("late_bg");
   }
   scheduleCorrectFeedbackReset();
@@ -1009,28 +1122,18 @@ function dimAnswer(selection) {
   selection.checked = false;
 }
 
-function calcScore(correctAns, answerCategory, card) {
-  let qScore;
-  if (!correctAns) {
-    qScore = 0;
-  } else {
-    // const numOptions = list.children.length;
-    // const seconds = (duration + getInputOffset()) / 1000;
-    // Base difficulty
-    // let correctBase =
-    //   mode === "know"
-    //     ? numOptions * 1.2 // slightly reduced from 1.5
-    //     : 3;
-    // const timeBonus = Math.max(0, Math.floor(7 - seconds));
-    const categoryScore = 10;
-    const flipBonus = roundState.roundFlip ? 3 : 0;
-    const blindBonus = roundState.blindRound ? 3 : 0;
-    const roundBonus = Math.min(5, flipBonus + blindBonus);
-    qScore = Math.min(20, Math.round(categoryScore + roundBonus + blindBonus));
-  }
+function calcScore(answerCategory, card) {
+  console.log(answerCategory);
+  const categoryScore = answerCategory.score;
+  console.log(categoryScore, card);
+  console.log(LEARNING_RULES.stageSettings);
+  const roundBonus = LEARNING_RULES.stageSettings[card.wordLevel].score;
+  const score = Math.min(20, Math.round(categoryScore + roundBonus));
 
-  card.scores.push(qScore);
-  if (card.scores.length > 20) card.scores.shift();
+  return score;
+
+  // card.scores.push(score);
+  // if (card.scores.length > 20) card.scores.shift();
 
   // card.last5Scores.push(qScore);
   // if (card.last5Scores.length > 5) card.last5Scores.shift();
@@ -1038,7 +1141,7 @@ function calcScore(correctAns, answerCategory, card) {
   // card.recentScore = card.last5Scores.reduce((sum, val) => sum + val, 0);
 }
 
-function updateFeedbackGrid(answerCategory) {
+function updateFeedbackGrid(answerCategoryLabel) {
   // let classToAdd;
   // if (answerCategory === "correct") {
   //   classToAdd = "correct_answer";
@@ -1051,7 +1154,7 @@ function updateFeedbackGrid(answerCategory) {
   // }
   const cube = document.createElement("div");
   cube.classList.add("cube");
-  cube.classList.add(answerCategory);
+  cube.classList.add(answerCategoryLabel);
   feedGrid.append(cube);
   const allCubes = document.getElementsByClassName("cube");
   const numberOfCubes = allCubes.length;
@@ -1139,7 +1242,7 @@ function startSessionTimer() {
     const minutes = String(Math.floor(elapsedSeconds / 60)).padStart(2, "0");
     sessionTimer.textContent = `${minutes}:${seconds}`;
   }
-
+  tick();
   sessionClock = setInterval(tick, 1000);
 }
 
@@ -1236,6 +1339,7 @@ function setBlindCircleProgress(progress) {
 
 function onSubmit(e) {
   e.preventDefault();
+
   const card = chosenCard;
   const button = e.currentTarget;
 
@@ -1325,9 +1429,13 @@ function resetState() {
 
 function startApp() {
   // startBtn.style.display = "none";
+
+  endSessionBtn.classList.add("inactive");
+  // endSessionBtn.disabled = true;
+
   if (sessionClock) clearInterval(sessionClock);
   sessionTimer.textContent = "00:00";
-  sessionState = resetSessioStats();
+  sessionState = resetSessionStats();
   currentSessionArr = [];
   // currentSessionStats = new Map();
 
@@ -1353,6 +1461,7 @@ function updateUI() {
 function removeWord() {
   chosenCard.isRemoved = true;
   chosenCard.inCycle = false;
+  // saveProgress();
   feedback.textContent = "המילה הוסרה מהמאגר";
   setTimeout(resetState, 2000);
 }
@@ -1394,10 +1503,30 @@ backHomeBtn.addEventListener("click", () => {
   navigate("home");
 });
 
+// function checkUnresolvedLastQuestion() {
+//   const sessionCards = Array.from(sessionState.sessionCards.values());
+//   const lastCard = sessionCards.at(-1);
+//   if (!lastCard.recalls.at(-1))
+//     lastCard.recalls.push({ category: "unresolved", time: 5000 });
+// }
+
 endSessionBtn.addEventListener("click", () => {
-  stopSession();
-  renderSummary();
-  navigate("summary");
+  if (sessionStarted) {
+    stopSession();
+    // checkUnresolvedLastQuestion();
+    renderSummary();
+    navigate("summary");
+  } else {
+    if (roundState.firstTry) {
+      showMsg("אין לי נתונים להציג");
+    } else {
+      showMsg("ענה על השאלה בכדי לסיים את הסשן");
+    }
+    setTimeout(() => {
+      bubble.classList.add("invisible");
+      feedback.textContent = "";
+    }, 1000);
+  }
 });
 
 //ANIMATION

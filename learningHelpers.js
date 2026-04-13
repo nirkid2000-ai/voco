@@ -1,6 +1,6 @@
 "use strict";
 
-import { LEARNING_RULES, ANSWERS_CATEGORIES } from "/learningRules.js";
+import { LEARNING_RULES, ANSWERS_CATEGORIES } from "./learningRules.js";
 
 // export function getStageKey(card) {
 //   return `${card.word_status}${card.levelStreak}`;
@@ -91,12 +91,12 @@ export function calculateCooldown(card, category) {
 
   const correctCount = card.firstAnswersHistory.filter(
     (a) =>
-      a === ANSWERS_CATEGORIES.FIRST_CORRECT ||
-      a === ANSWERS_CATEGORIES.FAST_CORRECT,
+      a === ANSWERS_CATEGORIES.FIRST_CORRECT.label ||
+      a === ANSWERS_CATEGORIES.FAST_CORRECT.label,
   ).length;
 
   const fastCount = card.firstAnswersHistory.filter(
-    (a) => a === ANSWERS_CATEGORIES.FAST_CORRECT,
+    (a) => a === ANSWERS_CATEGORIES.FAST_CORRECT.label,
   ).length;
 
   const isBoost =
@@ -114,8 +114,8 @@ export function calculateCooldown(card, category) {
   );
 }
 
-const WRONG_CATEGORIES = new Set([...Object.values(ANSWERS_CATEGORIES.WRONG)]);
+// const WRONG_CATEGORIES = new Set([...Object.values(ANSWERS_CATEGORIES.WRONG)]);
 
-export function isWrongCategory(category) {
-  return WRONG_CATEGORIES.has(category);
-}
+// export function isWrongCategory(category) {
+//   return WRONG_CATEGORIES.has(category);
+// }

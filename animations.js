@@ -1,62 +1,52 @@
 "use strict";
-
-let lookDir = 1;
-
 export function startAnimations() {
-  startBlinking();
-  startEyeMovement();
+  const crows = document.querySelectorAll(".crow");
+  crows.forEach((crow, index) => {
+    startBlinking(crow, index);
+    startEyeMovement(crow, index);
+  });
 }
-
-function startBlinking() {
-  setTimeout(blink, 1500);
+function startBlinking(crow, index) {
+  const initialDelay = 1500 + index * 250;
+  setTimeout(() => blink(crow), initialDelay);
 }
-
-function blink() {
+function blink(crow) {
   const openEyes = [
-    document.getElementById("eyeL"),
-    document.getElementById("eyeR"),
-    document.getElementById("pupilL"),
-    document.getElementById("pupilR"),
+    crow.querySelector(".eyeL"),
+    crow.querySelector(".eyeR"),
+    crow.querySelector(".pupilL"),
+    crow.querySelector(".pupilR"),
   ];
-
   const closedEyes = [
-    document.getElementById("eyeClosedL"),
-    document.getElementById("eyeClosedR"),
+    crow.querySelector(".eyeClosedL"),
+    crow.querySelector(".eyeClosedR"),
   ];
-
   hide(openEyes);
   show(closedEyes);
-
   setTimeout(() => {
     hide(closedEyes);
     show(openEyes);
-
     const next = 2000 + Math.random() * 3000;
-    setTimeout(blink, next);
+    setTimeout(() => blink(crow), next);
   }, 120);
 }
-
-function startEyeMovement() {
-  const pupilL = document.getElementById("pupilL");
-  const pupilR = document.getElementById("pupilR");
-
+function startEyeMovement(crow, index) {
+  const pupilL = crow.querySelector(".pupilL");
+  const pupilR = crow.querySelector(".pupilR");
   if (!pupilL || !pupilR) return;
-
+  let lookDir = index % 2 === 0 ? 1 : -1;
   setInterval(() => {
     lookDir *= -1;
     const x = lookDir * 4;
-
     pupilL.style.transform = `translateX(${x}px)`;
     pupilR.style.transform = `translateX(${x}px)`;
   }, 1800);
 }
-
 function show(elements) {
   elements.forEach((el) => {
     if (el) el.style.display = "block";
   });
 }
-
 function hide(elements) {
   elements.forEach((el) => {
     if (el) el.style.display = "none";

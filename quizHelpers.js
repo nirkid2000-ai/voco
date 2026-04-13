@@ -1,28 +1,20 @@
 "use strict";
 
-import { LEARNING_RULES, ANSWERS_CATEGORIES } from "/learningRules.js";
-import { getStageStep } from "/learningHelpers.js";
-import { getInputOffset } from "/utils.js";
+import { LEARNING_RULES, ANSWERS_CATEGORIES } from "./learningRules.js";
+import { getStageStep } from "./learningHelpers.js";
+import { getInputOffset } from "./utils.js";
 
 export function getDiffArrowPosition(card) {
   return LEARNING_RULES.diffLevels[card.diff];
 }
 
 export function getBlindDuration(card) {
-  return LEARNING_RULES.stageSettings[card.wordLevel].blindTime ?? 0;
+  return LEARNING_RULES.stageSettings[card.wordLevel]?.blindTime ?? 0;
 }
 
 export function getCountdownDuration(card) {
   const step = getStageStep(card);
   return step ? step.countdown * 1000 + getInputOffset() : 0;
-}
-
-export function getTriesMessage(tries) {
-  if (tries === 1) return "טעות ראשונה";
-  if (tries === 2) return "טעות שנייה";
-  if (tries === 3) return "טעות שלישית";
-  // if (tries === 4) return "טעות רביעית";
-  return `טעות מספר ${tries}`;
 }
 
 export function evaluateAnswer(correctAns, mode, duration, didTimeout) {
@@ -31,12 +23,15 @@ export function evaluateAnswer(correctAns, mode, duration, didTimeout) {
   const isGuess = mode === "guess";
   const isMain = mode === "main";
 
+  const isVeryFast =
+    duration < LEARNING_RULES.speedThresholds.veryQuickMs + offset;
   const isFast = duration < LEARNING_RULES.speedThresholds.quickMs + offset;
   const isSlow = duration > LEARNING_RULES.speedThresholds.slowMs + offset;
 
   // ✅ CORRECT ANSWERS
   if (correctAns) {
     if (isKnow && !didTimeout) {
+      if (isVeryFast) return ANSWERS_CATEGORIES.VERY_FAST_CORRECT;
       if (isFast) return ANSWERS_CATEGORIES.FAST_CORRECT;
       if (isSlow) return ANSWERS_CATEGORIES.SLOW_CORRECT;
       return ANSWERS_CATEGORIES.FIRST_CORRECT;

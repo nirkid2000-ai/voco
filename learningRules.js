@@ -24,6 +24,7 @@ export const LEARNING_RULES = {
   },
 
   speedThresholds: {
+    veryQuickMs: 1500,
     quickMs: 2500,
     slowMs: 6000,
   },
@@ -69,6 +70,7 @@ export const LEARNING_RULES = {
       status: "מילה חדשה",
       streakThreshold: 1,
       maxLengthDiff: 4,
+      score: 2,
       0: {
         countdown: 10,
         stars: 0,
@@ -83,6 +85,7 @@ export const LEARNING_RULES = {
       example: true,
       streakThreshold: 1,
       maxLengthDiff: 4,
+      score: 2,
 
       0: {
         countdown: 10,
@@ -98,6 +101,8 @@ export const LEARNING_RULES = {
       example: true,
       streakThreshold: 2,
       maxLengthDiff: 3,
+      score: 3,
+
       0: {
         countdown: 7,
         stars: 9.5,
@@ -119,6 +124,8 @@ export const LEARNING_RULES = {
       example: false,
       streakThreshold: 2,
       maxLengthDiff: 3,
+      score: 4,
+
       0: {
         countdown: 6,
         stars: 30,
@@ -140,6 +147,8 @@ export const LEARNING_RULES = {
       example: false,
       streakThreshold: 2,
       maxLengthDiff: 2,
+      score: 5,
+
       0: {
         countdown: 5,
         stars: 50,
@@ -161,16 +170,18 @@ export const LEARNING_RULES = {
       example: false,
       streakThreshold: 2,
       maxLengthDiff: 2,
-      blindTime: 5000,
+      blindTime: 3500,
+      score: 6,
+
       0: {
-        countdown: 5,
+        countdown: 3,
         stars: 70,
         flip: true,
         blind: false,
         demoteTo: [4, 1],
       },
       1: {
-        countdown: 5,
+        countdown: 3,
         stars: 80,
         flip: false,
         blind: true,
@@ -183,16 +194,18 @@ export const LEARNING_RULES = {
       example: false,
       streakThreshold: 2,
       maxLengthDiff: 2,
-      blindTime: 5000,
+      blindTime: 2500,
+      score: 8,
+
       0: {
-        countdown: 5,
+        countdown: 3,
         stars: 90,
         flip: false,
         blind: true,
         demoteTo: [5, 1],
       },
       1: {
-        countdown: 5,
+        countdown: 3,
         stars: 100,
         flip: true,
         blind: true,
@@ -230,22 +243,82 @@ export const LEARNING_RULES = {
 };
 
 export const ANSWERS_CATEGORIES = {
-  FAST_CORRECT: "fastCorrect",
-  FIRST_CORRECT: "correct",
-  SLOW_CORRECT: "slowCorrect",
-  LATE_CORRECT: "lateCorrect",
-  RECOVERY_CORRECT: "recoveryCorrect",
-  CORRECT_GUESS: "correctGuess",
+  VERY_FAST_CORRECT: {
+    passed: true,
+    label: "veryFastCorrect",
+    score: 12,
+    msg: "נכון במהירות האור",
+  },
+  FAST_CORRECT: {
+    passed: true,
+    label: "fastCorrect",
+    score: 10,
+    msg: "וואו! זה היה מהיר!",
+  },
+  FIRST_CORRECT: {
+    passed: true,
+    label: "correct",
+    score: 7,
+    msg: "כל הכבוד! תשובה נכונה",
+  },
+  SLOW_CORRECT: {
+    passed: true,
+    label: "slowCorrect",
+    score: 4,
+    msg: "תשובה נכונה אבל טיפה לאט ",
+  },
+  LATE_CORRECT: {
+    passed: false,
+    label: "lateCorrect",
+    score: 2,
+    msg: "תשובה נכונה אבל מאוחר מדי",
+  },
+  RECOVERY_CORRECT: {
+    passed: false,
+    label: "recoveryCorrect",
+    score: 0,
+    msg: "הפעם הצלחת",
+  },
+  CORRECT_GUESS: {
+    passed: true,
+    label: "correctGuess",
+    score: 4,
+    msg: "יפה. ניחוש מוצלח",
+  },
   WRONG: {
-    WRONG_GUESS: "wrongGuess",
-    WRONG_ANSWER: "wrongAnswer",
-    STRONG_WRONG: "strongWrong",
+    WRONG_GUESS: {
+      passed: false,
+      label: "wrongGuess",
+      score: 0,
+      msg: "ניחוש לא מוצלח. נסו שוב...",
+    },
+    WRONG_ANSWER: {
+      passed: false,
+      label: "wrongAnswer",
+      score: 0,
+      msg: (currentTries) => `${getTriesMessage(currentTries)} נסה שוב`,
+    },
+    STRONG_WRONG: {
+      passed: false,
+      label: "strongWrong",
+      score: 0,
+      msg: "דווקא לא... :) נסה שוב",
+    },
   },
 };
 
 export const CORRECT_CATEGORIES = new Set([
-  ANSWERS_CATEGORIES.FAST_CORRECT,
-  ANSWERS_CATEGORIES.FIRST_CORRECT,
-  ANSWERS_CATEGORIES.SLOW_CORRECT,
-  ANSWERS_CATEGORIES.CORRECT_GUESS,
+  ANSWERS_CATEGORIES.VERY_FAST_CORRECT.label,
+  ANSWERS_CATEGORIES.FAST_CORRECT.label,
+  ANSWERS_CATEGORIES.FIRST_CORRECT.label,
+  ANSWERS_CATEGORIES.SLOW_CORRECT.label,
+  ANSWERS_CATEGORIES.CORRECT_GUESS.label,
 ]);
+
+function getTriesMessage(tries) {
+  if (tries === 1) return "טעות ראשונה";
+  if (tries === 2) return "טעות שנייה";
+  if (tries === 3) return "טעות שלישית";
+  // if (tries === 4) return "טעות רביעית";
+  return `טעות מספר ${tries}`;
+}

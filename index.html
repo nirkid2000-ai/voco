@@ -14,7 +14,7 @@
         <div class="crow_home">
           <?xml version="1.0" encoding="UTF-8"?>
           <svg
-            id="Crow"
+            class="crow"
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 768 768"
           >
@@ -25,23 +25,21 @@
             />
             <g id="Legs">
               <path
-                id="legR"
                 d="M398.62,711.7l100.13.89c2,.02,2.67-3.1.89-4.16-6.67-3.97-16.76-10.19-25.11-16.23-13.81-9.98-15.04-25.91-15.34-35.92-.79-26.93,0-107.76,0-107.76h-28.05v106.72c0,16.03-6.58,31.11-17.74,40.63l-15.51,13.24c-.96.82-.47,2.58.73,2.59Z"
                 fill="#f0881a"
               />
               <path
-                id="legL"
                 d="M367.45,711.7l-100.13.89c-2,.02-2.67-3.1-.89-4.16,6.67-3.97,16.76-10.19,25.11-16.23,13.81-9.98,15.04-25.91,15.34-35.92.79-26.93,0-107.76,0-107.76h28.05v106.72c0,16.03,6.58,31.11,17.74,40.63l15.51,13.24c.96.82.47,2.58-.73,2.59Z"
                 fill="#f0881a"
               />
             </g>
             <path
-              id="backwingL"
+              class="backwingL"
               d="M243.1,656.96l-19.24-396.69s-103.41,32.68-99.17,117.68c4.24,85,21.78,149.52,42.52,191.82,18.77,38.3,60.42,89.1,60.42,89.1,0,0,4.23,3.42,8.57,3.31s6.9-5.21,6.9-5.21Z"
               fill="#0e1724"
             />
             <path
-              id="backwingR"
+              class="backwingR"
               d="M523.94,656.96l19.24-396.69s103.41,32.68,99.17,117.68c-4.24,85-21.78,149.52-42.52,191.82-18.77,38.3-60.42,89.1-60.42,89.1,0,0-4.23,3.42-8.57,3.31s-6.9-5.21-6.9-5.21Z"
               fill="#0e1724"
             />
@@ -57,118 +55,58 @@
                 fill="#1a2c42"
               />
             </g>
-            <g id="EyeLeft">
-              <path
-                id="eyeHappyL"
-                d="M259.01,152.79c28.58-18.17,54.62-13.98,78.36,10.49"
-                fill="none"
-                stroke="#000"
-                stroke-linecap="round"
-                stroke-width="18"
-              />
-              <line
-                id="eyeClosedL"
-                x1="262.72"
-                y1="162.11"
-                x2="341.78"
-                y2="162.11"
-                fill="none"
-                stroke="#000"
-                stroke-linecap="round"
-                stroke-width="18"
-              />
-              <g id="eyeBlinkL">
-                <path
-                  d="M257.48,134.93c26.5,18.06,55.34,31.26,86.12,40.42"
-                  fill="none"
-                  stroke="#000"
-                  stroke-linecap="round"
-                  stroke-width="18"
-                />
-                <line
-                  x1="247.13"
-                  y1="184.17"
-                  x2="341.93"
-                  y2="176.31"
-                  fill="none"
-                  stroke="#000"
-                  stroke-linecap="round"
-                  stroke-width="18"
-                />
-              </g>
+            <g>
               <ellipse
-                id="eyeL"
+                class="eyeL"
                 cx="298.21"
                 cy="176.14"
                 rx="58.16"
                 ry="60.52"
                 fill="#fff"
-                stroke="#fff"
-                stroke-width=".5"
               />
               <circle
-                id="pupilL"
+                class="pupilL"
                 cx="303.33"
                 cy="176.9"
                 r="31.85"
                 fill="#1a1a1a"
               />
-            </g>
-            <g id="EyeRight">
-              <path
-                id="eyeHappyR"
-                d="M437.36,163.9c22.39-25.42,48.56-28.65,78.18-11.76"
-                fill="none"
-                stroke="#000"
-                stroke-linecap="round"
-                stroke-width="18"
-              />
               <line
-                id="eyeClosedR"
-                x1="432.72"
+                class="eyeClosedL"
+                x1="262.72"
                 y1="162.11"
-                x2="511.78"
+                x2="341.78"
                 y2="162.11"
-                fill="none"
                 stroke="#000"
-                stroke-linecap="round"
                 stroke-width="18"
+                stroke-linecap="round"
               />
-              <g id="eyeBlinkR" data-name="eyeBlinkL">
-                <path
-                  d="M509.24,134.93c-21.35,16.93-51.91,29.53-86.12,40.42"
-                  fill="none"
-                  stroke="#000"
-                  stroke-linecap="round"
-                  stroke-width="18"
-                />
-                <line
-                  x1="519.59"
-                  y1="184.17"
-                  x2="424.79"
-                  y2="176.31"
-                  fill="none"
-                  stroke="#000"
-                  stroke-linecap="round"
-                  stroke-width="18"
-                />
-              </g>
+            </g>
+            <g>
               <ellipse
-                id="eyeR"
+                class="eyeR"
                 cx="468.21"
                 cy="176.14"
                 rx="58.16"
                 ry="60.52"
                 fill="#fff"
-                stroke="#fff"
-                stroke-width=".5"
               />
               <circle
-                id="pupilR"
+                class="pupilR"
                 cx="460.27"
                 cy="176.9"
                 r="31.85"
                 fill="#1a1a1a"
+              />
+              <line
+                class="eyeClosedR"
+                x1="432.72"
+                y1="162.11"
+                x2="511.78"
+                y2="162.11"
+                stroke="#000"
+                stroke-width="18"
+                stroke-linecap="round"
               />
             </g>
             <g id="Beak">
@@ -184,12 +122,12 @@
               />
             </g>
             <path
-              id="wingL"
+              class="wingL"
               d="M190.69,608.82s33.04-60.46,41.9-136.97c8.86-76.52,2.95-167.01,2.95-167.01,0,0-2.46-39.97-20.74-50.08-18.28-10.11-71.04,53.87-85.95,76.91-14.01,21.64-15.84,40.1-15.91,56.37-.12,29.51,5.36,68.6,22.42,115.76,17.06,47.15,55.34,105.03,55.34,105.03Z"
               fill="#263f61"
             />
             <path
-              id="wingR"
+              class="wingR"
               d="M576.34,608.82s-33.04-60.46-41.9-136.97c-8.86-76.52-2.95-167.01-2.95-167.01,0,0,2.46-39.97,20.74-50.08,18.28-10.11,71.04,53.87,85.95,76.91,14.01,21.64,15.84,40.1,15.91,56.37.12,29.51-5.36,68.6-22.42,115.76-17.06,47.15-55.34,105.03-55.34,105.03Z"
               fill="#263f61"
             />
@@ -204,9 +142,8 @@
         <p>Your Session Stats:</p>
         <div class="summary_con"></div>
         <div class="crow_home">
-          <?xml version="1.0" encoding="UTF-8"?>
           <svg
-            id="Crow"
+            class="crow"
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 768 768"
           >
@@ -217,23 +154,21 @@
             />
             <g id="Legs">
               <path
-                id="legR"
                 d="M398.62,711.7l100.13.89c2,.02,2.67-3.1.89-4.16-6.67-3.97-16.76-10.19-25.11-16.23-13.81-9.98-15.04-25.91-15.34-35.92-.79-26.93,0-107.76,0-107.76h-28.05v106.72c0,16.03-6.58,31.11-17.74,40.63l-15.51,13.24c-.96.82-.47,2.58.73,2.59Z"
                 fill="#f0881a"
               />
               <path
-                id="legL"
                 d="M367.45,711.7l-100.13.89c-2,.02-2.67-3.1-.89-4.16,6.67-3.97,16.76-10.19,25.11-16.23,13.81-9.98,15.04-25.91,15.34-35.92.79-26.93,0-107.76,0-107.76h28.05v106.72c0,16.03,6.58,31.11,17.74,40.63l15.51,13.24c.96.82.47,2.58-.73,2.59Z"
                 fill="#f0881a"
               />
             </g>
             <path
-              id="backwingL"
+              class="backwingL"
               d="M243.1,656.96l-19.24-396.69s-103.41,32.68-99.17,117.68c4.24,85,21.78,149.52,42.52,191.82,18.77,38.3,60.42,89.1,60.42,89.1,0,0,4.23,3.42,8.57,3.31s6.9-5.21,6.9-5.21Z"
               fill="#0e1724"
             />
             <path
-              id="backwingR"
+              class="backwingR"
               d="M523.94,656.96l19.24-396.69s103.41,32.68,99.17,117.68c-4.24,85-21.78,149.52-42.52,191.82-18.77,38.3-60.42,89.1-60.42,89.1,0,0-4.23,3.42-8.57,3.31s-6.9-5.21-6.9-5.21Z"
               fill="#0e1724"
             />
@@ -249,118 +184,58 @@
                 fill="#1a2c42"
               />
             </g>
-            <g id="EyeLeft">
-              <path
-                id="eyeHappyL"
-                d="M259.01,152.79c28.58-18.17,54.62-13.98,78.36,10.49"
-                fill="none"
-                stroke="#000"
-                stroke-linecap="round"
-                stroke-width="18"
-              />
-              <line
-                id="eyeClosedL"
-                x1="262.72"
-                y1="162.11"
-                x2="341.78"
-                y2="162.11"
-                fill="none"
-                stroke="#000"
-                stroke-linecap="round"
-                stroke-width="18"
-              />
-              <g id="eyeBlinkL">
-                <path
-                  d="M257.48,134.93c26.5,18.06,55.34,31.26,86.12,40.42"
-                  fill="none"
-                  stroke="#000"
-                  stroke-linecap="round"
-                  stroke-width="18"
-                />
-                <line
-                  x1="247.13"
-                  y1="184.17"
-                  x2="341.93"
-                  y2="176.31"
-                  fill="none"
-                  stroke="#000"
-                  stroke-linecap="round"
-                  stroke-width="18"
-                />
-              </g>
+            <g>
               <ellipse
-                id="eyeL"
+                class="eyeL"
                 cx="298.21"
                 cy="176.14"
                 rx="58.16"
                 ry="60.52"
                 fill="#fff"
-                stroke="#fff"
-                stroke-width=".5"
               />
               <circle
-                id="pupilL"
+                class="pupilL"
                 cx="303.33"
                 cy="176.9"
                 r="31.85"
                 fill="#1a1a1a"
               />
-            </g>
-            <g id="EyeRight">
-              <path
-                id="eyeHappyR"
-                d="M437.36,163.9c22.39-25.42,48.56-28.65,78.18-11.76"
-                fill="none"
-                stroke="#000"
-                stroke-linecap="round"
-                stroke-width="18"
-              />
               <line
-                id="eyeClosedR"
-                x1="432.72"
+                class="eyeClosedL"
+                x1="262.72"
                 y1="162.11"
-                x2="511.78"
+                x2="341.78"
                 y2="162.11"
-                fill="none"
                 stroke="#000"
-                stroke-linecap="round"
                 stroke-width="18"
+                stroke-linecap="round"
               />
-              <g id="eyeBlinkR" data-name="eyeBlinkL">
-                <path
-                  d="M509.24,134.93c-21.35,16.93-51.91,29.53-86.12,40.42"
-                  fill="none"
-                  stroke="#000"
-                  stroke-linecap="round"
-                  stroke-width="18"
-                />
-                <line
-                  x1="519.59"
-                  y1="184.17"
-                  x2="424.79"
-                  y2="176.31"
-                  fill="none"
-                  stroke="#000"
-                  stroke-linecap="round"
-                  stroke-width="18"
-                />
-              </g>
+            </g>
+            <g>
               <ellipse
-                id="eyeR"
+                class="eyeR"
                 cx="468.21"
                 cy="176.14"
                 rx="58.16"
                 ry="60.52"
                 fill="#fff"
-                stroke="#fff"
-                stroke-width=".5"
               />
               <circle
-                id="pupilR"
+                class="pupilR"
                 cx="460.27"
                 cy="176.9"
                 r="31.85"
                 fill="#1a1a1a"
+              />
+              <line
+                class="eyeClosedR"
+                x1="432.72"
+                y1="162.11"
+                x2="511.78"
+                y2="162.11"
+                stroke="#000"
+                stroke-width="18"
+                stroke-linecap="round"
               />
             </g>
             <g id="Beak">
@@ -376,12 +251,12 @@
               />
             </g>
             <path
-              id="wingL"
+              class="wingL"
               d="M190.69,608.82s33.04-60.46,41.9-136.97c8.86-76.52,2.95-167.01,2.95-167.01,0,0-2.46-39.97-20.74-50.08-18.28-10.11-71.04,53.87-85.95,76.91-14.01,21.64-15.84,40.1-15.91,56.37-.12,29.51,5.36,68.6,22.42,115.76,17.06,47.15,55.34,105.03,55.34,105.03Z"
               fill="#263f61"
             />
             <path
-              id="wingR"
+              class="wingR"
               d="M576.34,608.82s-33.04-60.46-41.9-136.97c-8.86-76.52-2.95-167.01-2.95-167.01,0,0,2.46-39.97,20.74-50.08,18.28-10.11,71.04,53.87,85.95,76.91,14.01,21.64,15.84,40.1,15.91,56.37.12,29.51-5.36,68.6-22.42,115.76-17.06,47.15-55.34,105.03-55.34,105.03Z"
               fill="#263f61"
             />
@@ -604,7 +479,6 @@
             <div class="text_bubble">
               <div class="bubble_wrap invisible">
                 <div class="bubble">
-                  <?xml version="1.0" encoding="UTF-8"?>
                   <svg
                     id="Layer_2"
                     data-name="Layer 2"
@@ -633,9 +507,8 @@
             </div>
             <div class="btns">
               <div class="crow_wrap">
-                <?xml version="1.0" encoding="UTF-8"?>
                 <svg
-                  id="Crow"
+                  class="crow"
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 768 768"
                 >
@@ -646,23 +519,21 @@
                   />
                   <g id="Legs">
                     <path
-                      id="legR"
                       d="M398.62,711.7l100.13.89c2,.02,2.67-3.1.89-4.16-6.67-3.97-16.76-10.19-25.11-16.23-13.81-9.98-15.04-25.91-15.34-35.92-.79-26.93,0-107.76,0-107.76h-28.05v106.72c0,16.03-6.58,31.11-17.74,40.63l-15.51,13.24c-.96.82-.47,2.58.73,2.59Z"
                       fill="#f0881a"
                     />
                     <path
-                      id="legL"
                       d="M367.45,711.7l-100.13.89c-2,.02-2.67-3.1-.89-4.16,6.67-3.97,16.76-10.19,25.11-16.23,13.81-9.98,15.04-25.91,15.34-35.92.79-26.93,0-107.76,0-107.76h28.05v106.72c0,16.03,6.58,31.11,17.74,40.63l15.51,13.24c.96.82.47,2.58-.73,2.59Z"
                       fill="#f0881a"
                     />
                   </g>
                   <path
-                    id="backwingL"
+                    class="backwingL"
                     d="M243.1,656.96l-19.24-396.69s-103.41,32.68-99.17,117.68c4.24,85,21.78,149.52,42.52,191.82,18.77,38.3,60.42,89.1,60.42,89.1,0,0,4.23,3.42,8.57,3.31s6.9-5.21,6.9-5.21Z"
                     fill="#0e1724"
                   />
                   <path
-                    id="backwingR"
+                    class="backwingR"
                     d="M523.94,656.96l19.24-396.69s103.41,32.68,99.17,117.68c-4.24,85-21.78,149.52-42.52,191.82-18.77,38.3-60.42,89.1-60.42,89.1,0,0-4.23,3.42-8.57,3.31s-6.9-5.21-6.9-5.21Z"
                     fill="#0e1724"
                   />
@@ -678,118 +549,58 @@
                       fill="#1a2c42"
                     />
                   </g>
-                  <g id="EyeLeft">
-                    <path
-                      id="eyeHappyL"
-                      d="M259.01,152.79c28.58-18.17,54.62-13.98,78.36,10.49"
-                      fill="none"
-                      stroke="#000"
-                      stroke-linecap="round"
-                      stroke-width="18"
-                    />
-                    <line
-                      id="eyeClosedL"
-                      x1="262.72"
-                      y1="162.11"
-                      x2="341.78"
-                      y2="162.11"
-                      fill="none"
-                      stroke="#000"
-                      stroke-linecap="round"
-                      stroke-width="18"
-                    />
-                    <g id="eyeBlinkL">
-                      <path
-                        d="M257.48,134.93c26.5,18.06,55.34,31.26,86.12,40.42"
-                        fill="none"
-                        stroke="#000"
-                        stroke-linecap="round"
-                        stroke-width="18"
-                      />
-                      <line
-                        x1="247.13"
-                        y1="184.17"
-                        x2="341.93"
-                        y2="176.31"
-                        fill="none"
-                        stroke="#000"
-                        stroke-linecap="round"
-                        stroke-width="18"
-                      />
-                    </g>
+                  <g>
                     <ellipse
-                      id="eyeL"
+                      class="eyeL"
                       cx="298.21"
                       cy="176.14"
                       rx="58.16"
                       ry="60.52"
                       fill="#fff"
-                      stroke="#fff"
-                      stroke-width=".5"
                     />
                     <circle
-                      id="pupilL"
+                      class="pupilL"
                       cx="303.33"
                       cy="176.9"
                       r="31.85"
                       fill="#1a1a1a"
                     />
-                  </g>
-                  <g id="EyeRight">
-                    <path
-                      id="eyeHappyR"
-                      d="M437.36,163.9c22.39-25.42,48.56-28.65,78.18-11.76"
-                      fill="none"
-                      stroke="#000"
-                      stroke-linecap="round"
-                      stroke-width="18"
-                    />
                     <line
-                      id="eyeClosedR"
-                      x1="432.72"
+                      class="eyeClosedL"
+                      x1="262.72"
                       y1="162.11"
-                      x2="511.78"
+                      x2="341.78"
                       y2="162.11"
-                      fill="none"
                       stroke="#000"
-                      stroke-linecap="round"
                       stroke-width="18"
+                      stroke-linecap="round"
                     />
-                    <g id="eyeBlinkR" data-name="eyeBlinkL">
-                      <path
-                        d="M509.24,134.93c-21.35,16.93-51.91,29.53-86.12,40.42"
-                        fill="none"
-                        stroke="#000"
-                        stroke-linecap="round"
-                        stroke-width="18"
-                      />
-                      <line
-                        x1="519.59"
-                        y1="184.17"
-                        x2="424.79"
-                        y2="176.31"
-                        fill="none"
-                        stroke="#000"
-                        stroke-linecap="round"
-                        stroke-width="18"
-                      />
-                    </g>
+                  </g>
+                  <g>
                     <ellipse
-                      id="eyeR"
+                      class="eyeR"
                       cx="468.21"
                       cy="176.14"
                       rx="58.16"
                       ry="60.52"
                       fill="#fff"
-                      stroke="#fff"
-                      stroke-width=".5"
                     />
                     <circle
-                      id="pupilR"
+                      class="pupilR"
                       cx="460.27"
                       cy="176.9"
                       r="31.85"
                       fill="#1a1a1a"
+                    />
+                    <line
+                      class="eyeClosedR"
+                      x1="432.72"
+                      y1="162.11"
+                      x2="511.78"
+                      y2="162.11"
+                      stroke="#000"
+                      stroke-width="18"
+                      stroke-linecap="round"
                     />
                   </g>
                   <g id="Beak">
@@ -805,12 +616,12 @@
                     />
                   </g>
                   <path
-                    id="wingL"
+                    class="wingL"
                     d="M190.69,608.82s33.04-60.46,41.9-136.97c8.86-76.52,2.95-167.01,2.95-167.01,0,0-2.46-39.97-20.74-50.08-18.28-10.11-71.04,53.87-85.95,76.91-14.01,21.64-15.84,40.1-15.91,56.37-.12,29.51,5.36,68.6,22.42,115.76,17.06,47.15,55.34,105.03,55.34,105.03Z"
                     fill="#263f61"
                   />
                   <path
-                    id="wingR"
+                    class="wingR"
                     d="M576.34,608.82s-33.04-60.46-41.9-136.97c-8.86-76.52-2.95-167.01-2.95-167.01,0,0,2.46-39.97,20.74-50.08,18.28-10.11,71.04,53.87,85.95,76.91,14.01,21.64,15.84,40.1,15.91,56.37.12,29.51-5.36,68.6-22.42,115.76-17.06,47.15-55.34,105.03-55.34,105.03Z"
                     fill="#263f61"
                   />
