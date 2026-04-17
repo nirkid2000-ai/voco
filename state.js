@@ -1,6 +1,6 @@
 "use strict";
 
-import data from "./spanish.js";
+import data from "./latvian2.js";
 
 import { LEARNING_RULES } from "./learningRules.js";
 
@@ -29,7 +29,7 @@ export function createDefaultProgress() {
 export function createInitialCards() {
   return data.words.map((word, i) => ({
     id: i + 1,
-    question: word.es,
+    question: word.he,
     answer: word.en,
     diff: word.level,
     ...createDefaultProgress(),

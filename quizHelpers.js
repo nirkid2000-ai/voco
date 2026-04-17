@@ -1,8 +1,21 @@
 "use strict";
 
-import { LEARNING_RULES, ANSWERS_CATEGORIES } from "./learningRules.js";
+import { LEARNING_RULES } from "./learningRules.js";
 import { getStageStep } from "./learningHelpers.js";
 import { getInputOffset } from "./utils.js";
+
+export const ANSWER_KEYS = {
+  VERY_FAST_CORRECT: "VERY_FAST_CORRECT",
+  FAST_CORRECT: "FAST_CORRECT",
+  FIRST_CORRECT: "FIRST_CORRECT",
+  SLOW_CORRECT: "SLOW_CORRECT",
+  LATE_CORRECT: "LATE_CORRECT",
+  RECOVERY_CORRECT: "RECOVERY_CORRECT",
+  CORRECT_GUESS: "CORRECT_GUESS",
+  WRONG_GUESS: "WRONG_GUESS",
+  WRONG_ANSWER: "WRONG_ANSWER",
+  STRONG_WRONG: "STRONG_WRONG",
+};
 
 export function getDiffArrowPosition(card) {
   return LEARNING_RULES.diffLevels[card.diff];
@@ -31,30 +44,30 @@ export function evaluateAnswer(correctAns, mode, duration, didTimeout) {
   // ✅ CORRECT ANSWERS
   if (correctAns) {
     if (isKnow && !didTimeout) {
-      if (isVeryFast) return ANSWERS_CATEGORIES.VERY_FAST_CORRECT;
-      if (isFast) return ANSWERS_CATEGORIES.FAST_CORRECT;
-      if (isSlow) return ANSWERS_CATEGORIES.SLOW_CORRECT;
-      return ANSWERS_CATEGORIES.FIRST_CORRECT;
+      if (isVeryFast) return ANSWER_KEYS.VERY_FAST_CORRECT;
+      if (isFast) return ANSWER_KEYS.FAST_CORRECT;
+      if (isSlow) return ANSWER_KEYS.SLOW_CORRECT;
+      return ANSWER_KEYS.FIRST_CORRECT;
     }
 
     if (isKnow && didTimeout) {
-      return ANSWERS_CATEGORIES.LATE_CORRECT;
+      return ANSWER_KEYS.LATE_CORRECT;
     }
 
     if (isMain) {
-      return ANSWERS_CATEGORIES.RECOVERY_CORRECT;
+      return ANSWER_KEYS.RECOVERY_CORRECT;
     }
 
     if (isGuess) {
-      return ANSWERS_CATEGORIES.CORRECT_GUESS;
+      return ANSWER_KEYS.CORRECT_GUESS;
     }
   }
 
   // ❌ WRONG ANSWERS
   if (!correctAns) {
-    if (isGuess) return ANSWERS_CATEGORIES.WRONG.WRONG_GUESS;
-    if (isKnow) return ANSWERS_CATEGORIES.WRONG.STRONG_WRONG;
-    if (isMain) return ANSWERS_CATEGORIES.WRONG.WRONG_ANSWER;
+    if (isGuess) return ANSWER_KEYS.WRONG_GUESS;
+    if (isKnow) return ANSWER_KEYS.STRONG_WRONG;
+    if (isMain) return ANSWER_KEYS.WRONG_ANSWER;
   }
 }
 

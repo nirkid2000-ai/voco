@@ -1,3 +1,5 @@
+import { ANSWER_KEYS } from "./quizHelpers.js";
+
 export const LEARNING_RULES = {
   minWordGap: 5,
 
@@ -11,15 +13,16 @@ export const LEARNING_RULES = {
     minMs: 1000,
     maxMs: 1200000,
     multipliers: {
-      fastCorrect: 2,
-      correct: 1.5,
-      slowCorrect: 1.3,
-      correctGuess: 1,
-      recoveryCorrect: 1,
-      lateCorrect: 1.2,
-      strongWrong: 0.6,
-      wrongGuess: 0.8,
-      wrongAnswer: 0.98,
+      [ANSWER_KEYS.VERY_FAST_CORRECT]: 2.25,
+      [ANSWER_KEYS.FAST_CORRECT]: 2,
+      [ANSWER_KEYS.FIRST_CORRECT]: 1.5,
+      [ANSWER_KEYS.SLOW_CORRECT]: 1.3,
+      [ANSWER_KEYS.CORRECT_GUESS]: 1,
+      [ANSWER_KEYS.RECOVERY_CORRECT]: 1,
+      [ANSWER_KEYS.LATE_CORRECT]: 1.2,
+      [ANSWER_KEYS.STRONG_WRONG]: 0.6,
+      [ANSWER_KEYS.WRONG_GUESS]: 0.8,
+      [ANSWER_KEYS.WRONG_ANSWER]: 0.98,
     },
   },
 
@@ -64,15 +67,100 @@ export const LEARNING_RULES = {
   //   mastered1: 100,
   // },
 
+  uiTexts: {
+    appName: "VOCRO",
+    tagLine: {
+      he: "ללמוד אוצר מילים במהירות ",
+      en: " The fastest way to learn vocabulary",
+    },
+    wordStatus: {
+      0: { he: "מילה חדשה", en: "New Word" },
+      1: { he: "מילה לא מוכרת", en: "Unknown Word" },
+      2: { he: "מילה שאתה מזהה", en: "Word You Recognize" },
+      3: { he: "מילה שאתה מכיר", en: "Word You Know" },
+      4: { he: "מילה שאתה מכיר היטב", en: "Word You Know Well" },
+      5: { he: "מילה שאתה יודע בבטחון", en: "Word You Know Very good" },
+      6: { he: "מילה שאתה שולט בה", en: "Word You Master" },
+    },
+    difficulty: { he: "רמת קושי", en: " Difficulty Level" },
+    masteryLevel: { he: "רמת שליטה", en: "Mastery Level" },
+    timer: { he: "זמן תרגול: ", en: "Session Duration: " },
+    summaryHeader: { he: "סיכום התרגול", en: "Session Summary" },
+    summaryLabels: {
+      sessionDuration: { he: "משך התרגול: ", en: "Session Duration" },
+      totalQuestions: {
+        he: "סה״כ שאלות שהופיעו: ",
+        en: "Total Questions Answered",
+      },
+      totalPassed: { he: "סה״כ שאלות שעברת: ", en: "Total Questions Passed" },
+      totalKnown: {
+        he: "סה״כ שאלות שידעת בזמן: ",
+        en: "Total Questions You Knew On Time",
+      },
+      correctGuesses: {
+        he: "סה״כ שאלות שניחשת נכון: ",
+        en: "Total Questions You Guessed correctly",
+      },
+      totalFailed: {
+        he: "סה״כ שאלות שלא ידעת בזמן: ",
+        en: "Total Questions You Didn't Knew On Time",
+      },
+      avgRecallTime: { he: "זמן מענה ממוצע לשאלה: ", en: "Averge Answer Time" },
+      longestStrike: {
+        he: "רצף התשובות הנכונות הארוך ביותר: ",
+        en: "Longest Correct Streak",
+      },
+      uniqueWords: {
+        he: "מספר המילים השונות שהופיעו: ",
+        en: "Unique Words Practiced:",
+      },
+      improved: { he: "מספר המילים ששיפרת: ", en: "Words improved:" },
+      newWords: {
+        he: "מספר המילים החדשות שהתווספו: ",
+        en: "New Words Appeared:",
+      },
+      newLearned: {
+        he: "מספר המילים החדשות שלמדת: ",
+        en: "New Words Learned:",
+      },
+      strongest: {
+        he: "המילה החזקה ביותר שלך בתרגול: ",
+        en: "Your Strongest Word This Session: ",
+      },
+      weakest: {
+        he: " המילה החלשה ביותר שלך בתרגול: ",
+        en: "Your Weakest Word This Session: ",
+      },
+    },
+    buttons: {
+      home: {
+        start: { he: "התחילו ללמוד ", en: "Start Learning" },
+      },
+      mainApp: {
+        submit: {
+          know: { he: "אני יודע", en: "I Know" },
+          guess: { he: "אני מנחש", en: "I Guess" },
+          main: { he: "בחר תשובה", en: "Select Answer" },
+        },
+        nav: {
+          home: { he: "ראשי", en: "Home" },
+          end: { he: "סיים תרגול", en: "End Session" },
+          reset: { he: "אתחל מערכת", en: "Reset Progress" },
+        },
+      },
+      summary: { learnMore: { he: "יאללה עוד נגלה", en: "One More Session" } },
+    },
+  },
+
   stageSettings: {
     0: {
       label: "new",
-      status: "מילה חדשה",
+      // status: "מילה חדשה",
       streakThreshold: 1,
       maxLengthDiff: 4,
       score: 2,
       0: {
-        countdown: 10,
+        countdown: 30,
         stars: 0,
         flip: false,
         blind: false,
@@ -81,14 +169,14 @@ export const LEARNING_RULES = {
     },
     1: {
       label: "unknown",
-      status: "מילה לא מוכרת",
+      // status: "מילה לא מוכרת",
       example: true,
       streakThreshold: 1,
       maxLengthDiff: 4,
       score: 2,
 
       0: {
-        countdown: 10,
+        countdown: 20,
         stars: 0,
         flip: false,
         blind: false,
@@ -97,7 +185,7 @@ export const LEARNING_RULES = {
     },
     2: {
       label: "recognized",
-      status: "מילה שאתה מזהה",
+      // status: "מילה שאתה מזהה",
       example: true,
       streakThreshold: 2,
       maxLengthDiff: 3,
@@ -120,7 +208,7 @@ export const LEARNING_RULES = {
     },
     3: {
       label: "known",
-      status: "מילה שאתה מכיר",
+      // status: "מילה שאתה מכיר",
       example: false,
       streakThreshold: 2,
       maxLengthDiff: 3,
@@ -143,7 +231,7 @@ export const LEARNING_RULES = {
     },
     4: {
       label: "knownWell",
-      status: "מילה שאתה מכיר היטב",
+      // status: "מילה שאתה מכיר היטב",
       example: false,
       streakThreshold: 2,
       maxLengthDiff: 2,
@@ -166,7 +254,7 @@ export const LEARNING_RULES = {
     },
     5: {
       label: "strong",
-      status: "מילה שאתה יודע בבטחון",
+      // status: "מילה שאתה יודע בבטחון",
       example: false,
       streakThreshold: 2,
       maxLengthDiff: 2,
@@ -190,7 +278,7 @@ export const LEARNING_RULES = {
     },
     6: {
       label: "mastered",
-      status: "מילה שאתה שולט בה",
+      // status: "מילה שאתה שולט בה",
       example: false,
       streakThreshold: 2,
       maxLengthDiff: 2,
@@ -247,63 +335,110 @@ export const ANSWERS_CATEGORIES = {
     passed: true,
     label: "veryFastCorrect",
     score: 12,
-    msg: "נכון במהירות האור",
   },
   FAST_CORRECT: {
     passed: true,
     label: "fastCorrect",
     score: 10,
-    msg: "וואו! זה היה מהיר!",
   },
   FIRST_CORRECT: {
     passed: true,
     label: "correct",
     score: 7,
-    msg: "כל הכבוד! תשובה נכונה",
   },
   SLOW_CORRECT: {
     passed: true,
     label: "slowCorrect",
     score: 4,
-    msg: "תשובה נכונה אבל טיפה לאט ",
   },
   LATE_CORRECT: {
     passed: false,
     label: "lateCorrect",
     score: 2,
-    msg: "תשובה נכונה אבל מאוחר מדי",
   },
   RECOVERY_CORRECT: {
     passed: false,
     label: "recoveryCorrect",
     score: 0,
-    msg: "הפעם הצלחת",
   },
   CORRECT_GUESS: {
     passed: true,
     label: "correctGuess",
     score: 4,
-    msg: "יפה. ניחוש מוצלח",
   },
-  WRONG: {
-    WRONG_GUESS: {
-      passed: false,
-      label: "wrongGuess",
-      score: 0,
-      msg: "ניחוש לא מוצלח. נסו שוב...",
+  WRONG_GUESS: {
+    passed: false,
+    label: "wrongGuess",
+    score: 0,
+  },
+  WRONG_ANSWER: {
+    passed: false,
+    label: "wrongAnswer",
+    score: 0,
+  },
+  STRONG_WRONG: {
+    passed: false,
+    label: "strongWrong",
+    score: 0,
+  },
+};
+
+export const FEEDBACK_MEESAGES = {
+  answers: {
+    [ANSWER_KEYS.VERY_FAST_CORRECT]: {
+      he: "וואו! נכון במהירות האור",
+      en: "Right at the speed of light",
     },
-    WRONG_ANSWER: {
-      passed: false,
-      label: "wrongAnswer",
-      score: 0,
-      msg: (currentTries) => `${getTriesMessage(currentTries)} נסה שוב`,
+    [ANSWER_KEYS.FAST_CORRECT]: {
+      he: "נכון ומהר. כל הכבוד!",
+      en: "Nice! Correct and quick.",
     },
-    STRONG_WRONG: {
-      passed: false,
-      label: "strongWrong",
-      score: 0,
-      msg: "דווקא לא... :) נסה שוב",
+    [ANSWER_KEYS.FIRST_CORRECT]: {
+      he: "נכון מאוד!",
+      en: "Well done. That's correct.",
     },
+    [ANSWER_KEYS.CORRECT_GUESS]: {
+      he: "ניחוש מוצלח",
+      en: "Good Guess",
+    },
+    [ANSWER_KEYS.SLOW_CORRECT]: {
+      he: "קצת לאט אבל צדקת",
+      en: " A bit slow but correct",
+    },
+    [ANSWER_KEYS.LATE_CORRECT]: {
+      he: "נכון אבל מאוחר מדי...",
+      en: "Correct, but too late...",
+    },
+    [ANSWER_KEYS.RECOVERY_CORRECT]: {
+      he: "הפעם צדקת",
+      en: "Now you're right",
+    },
+    [ANSWER_KEYS.STRONG_WRONG]: {
+      he: "דווקא לא... נסה שוב",
+      en: "Nope. Try again...",
+    },
+    [ANSWER_KEYS.WRONG_ANSWER]: {
+      he: (currentTries) => `${getTriesMessage(currentTries)} נסה שוב`,
+      en: "Wrong again... one more time",
+    },
+    [ANSWER_KEYS.WRONG_GUESS]: {
+      he: "ניחוש לא מוצלח... נסה שוב",
+      en: "Wrong guess, try again.",
+    },
+  },
+  noAnswer: { he: "לא נבחרה תשובה.", en: "No answer selected." },
+  sessionError: {
+    noData: { he: "אין לי נתונים להציג.", en: "I have no data to show." },
+    notResolved: {
+      he: "ענה על השאלה בכדי לסיים את הסשן",
+      en: "Answer the question before ending the session.",
+    },
+  },
+  overlay: {
+    time: { he: "זמן מענה: ", en: "Answer Time: " },
+    avgTime: { he: "זמן מענה ממוצע: ", en: "Avergae answer time: " },
+    units: { he: "שניות", en: " Seconds" },
+    cooldownTime: { he: "זמן השהייה: ", en: "Cooldown Time:" },
   },
 };
 
@@ -313,6 +448,13 @@ export const CORRECT_CATEGORIES = new Set([
   ANSWERS_CATEGORIES.FIRST_CORRECT.label,
   ANSWERS_CATEGORIES.SLOW_CORRECT.label,
   ANSWERS_CATEGORIES.CORRECT_GUESS.label,
+]);
+
+export const KNOW_CATEGORIES = new Set([
+  ANSWERS_CATEGORIES.VERY_FAST_CORRECT.label,
+  ANSWERS_CATEGORIES.FAST_CORRECT.label,
+  ANSWERS_CATEGORIES.FIRST_CORRECT.label,
+  ANSWERS_CATEGORIES.SLOW_CORRECT.label,
 ]);
 
 function getTriesMessage(tries) {

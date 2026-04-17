@@ -1,6 +1,7 @@
 "use strict";
 
-import { LEARNING_RULES, ANSWERS_CATEGORIES } from "./learningRules.js";
+import { LEARNING_RULES } from "./learningRules.js";
+import { ANSWER_KEYS } from "./quizHelpers.js";
 
 // export function getStageKey(card) {
 //   return `${card.word_status}${card.levelStreak}`;
@@ -90,13 +91,12 @@ export function calculateCooldown(card, category) {
   const boostRules = LEARNING_RULES.boost.earlyLevelBoost;
 
   const correctCount = card.firstAnswersHistory.filter(
-    (a) =>
-      a === ANSWERS_CATEGORIES.FIRST_CORRECT.label ||
-      a === ANSWERS_CATEGORIES.FAST_CORRECT.label,
+    (a) => a === ANSWER_KEYS.FIRST_CORRECT || a === ANSWER_KEYS.FAST_CORRECT,
   ).length;
 
   const fastCount = card.firstAnswersHistory.filter(
-    (a) => a === ANSWERS_CATEGORIES.FAST_CORRECT.label,
+    (a) =>
+      a === ANSWER_KEYS.FAST_CORRECT || a === ANSWER_KEYS.VERY_FAST_CORRECT,
   ).length;
 
   const isBoost =

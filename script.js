@@ -3,6 +3,8 @@ import {
   LEARNING_RULES,
   ANSWERS_CATEGORIES,
   CORRECT_CATEGORIES,
+  FEEDBACK_MEESAGES,
+  KNOW_CATEGORIES,
 } from "./learningRules.js";
 import {
   shouldFlipNew,
@@ -28,6 +30,7 @@ import {
 } from "./utils.js";
 
 import {
+  ANSWER_KEYS,
   getDiffArrowPosition,
   getCountdownDuration,
   getBlindDuration,
@@ -39,23 +42,34 @@ import {
 
 import { startAnimations } from "./animations.js";
 
+// const appName = document.querySelector(".the_name");
+const tagline = document.querySelector(".tagline");
 const homeScreen = document.getElementById("home-screen");
 const appScreen = document.getElementById("app-screen");
 const summaryScreen = document.getElementById("summary-screen");
 
 const homeStartBtn = document.getElementById("home-start-btn");
 const studyMoreBtn = document.getElementById("study-more-btn");
+const langugaeBtn = document.querySelector(".languge_btn");
 
 const backHomeBtn = document.getElementById("back_home_btn");
 const endSessionBtn = document.getElementById("end_session_btn");
 
+const wordTop = document.querySelector(".word_top");
 const qText = document.querySelector(".q");
 const levelText = document.querySelector(".word_status");
+const diffLabel = document.querySelector(".word_difficulty");
 const difArrow = document.querySelector(".arrow");
+const masteryLabel = document.querySelector(".word_mastery");
+
 const list = document.querySelector(".wordlist");
 const submitMainBtn = document.querySelector(".main_ans");
+const submitKnowBtn = document.querySelector(".know_ans");
+const submitGuessBtn = document.querySelector(".guess_ans");
+const timerLabel = document.querySelector(".timer_label");
 const resetbtn = document.querySelector(".reset");
 const knowOrGuess = document.querySelector(".knoworguess");
+const menuBtns = document.querySelector(".menu_btns");
 const feedback = document.querySelector(".line_1");
 const scoreStat = document.querySelector(".score_stat");
 const streakStat = document.querySelector(".streak_stat");
@@ -84,7 +98,7 @@ const overlayCooldown = document.querySelector(".next_cooldown");
 const lastAnswers = document.querySelector(".last_answers");
 const bubble = document.querySelector(".bubble_wrap");
 
-const summaryCon = document.querySelector(".summary_con");
+const summaryCon = document.querySelector(".summary_wrap");
 
 const circle = document.getElementById("progressCircle");
 const radius = 45;
@@ -121,7 +135,10 @@ function saveProgress() {
     ]),
   );
 
+  const langugae = uiLang;
+
   const state = {
+    langugae,
     cardsProgress,
     globalScore,
     globalStreak,
@@ -164,6 +181,8 @@ function loadProgress() {
 
     buildCardsLookup();
 
+    uiLang = state.langugae ?? "he";
+
     globalScore = state.globalScore ?? 0;
     globalStreak = state.globalStreak ?? 0;
     correctGuesses = state.correctGuesses ?? 0;
@@ -182,7 +201,6 @@ function resetProgress() {
 
   cards = createInitialCards();
   buildCardsLookup();
-
   globalScore = 0;
   globalStreak = 0;
   correctGuesses = 0;
@@ -244,9 +262,50 @@ let isHolding = false;
 let pendingNext = null;
 let overlayMinTimeDone = false;
 
+let uiLang = "he";
+
 let sessionStarted;
 
+function setUiText(langugae) {
+  // appName.textContent = LEARNING_RULES.uiTexts.appName;
+  countdown.classList.remove("countdown_flip");
+  uiLang === "en" ? countdown.classList.add("countdown_flip") : 0;
+  bubble.classList.remove("rtl", "ltr");
+  bubble.classList.add(uiLang === "he" ? "rtl" : "ltr");
+  knowOrGuess.classList.remove("rtl", "ltr");
+  knowOrGuess.classList.add(uiLang === "he" ? "rtl" : "ltr");
+  menuBtns.classList.remove("reverse_flex");
+  menuBtns.classList.add(uiLang === "he" ? "reverse_flex" : "rtl");
+  wordTop.classList.remove("reverse_flex");
+  wordTop.classList.add(uiLang === "he" ? "rtl" : "reverse_flex");
+  tagline.textContent = LEARNING_RULES.uiTexts.tagLine[langugae];
+  homeStartBtn.textContent =
+    LEARNING_RULES.uiTexts.buttons.home.start[langugae];
+  diffLabel.textContent = LEARNING_RULES.uiTexts.difficulty[langugae];
+  masteryLabel.textContent = LEARNING_RULES.uiTexts.masteryLevel[langugae];
+  submitMainBtn.textContent =
+    LEARNING_RULES.uiTexts.buttons.mainApp.submit.main[langugae];
+  submitKnowBtn.textContent =
+    LEARNING_RULES.uiTexts.buttons.mainApp.submit.know[langugae];
+  submitGuessBtn.textContent =
+    LEARNING_RULES.uiTexts.buttons.mainApp.submit.guess[langugae];
+  backHomeBtn.textContent =
+    LEARNING_RULES.uiTexts.buttons.mainApp.nav.home[langugae];
+  endSessionBtn.textContent =
+    LEARNING_RULES.uiTexts.buttons.mainApp.nav.end[langugae];
+  resetbtn.textContent =
+    LEARNING_RULES.uiTexts.buttons.mainApp.nav.reset[langugae];
+  timerLabel.textContent = LEARNING_RULES.uiTexts.timer[langugae];
+  studyMoreBtn.textContent =
+    LEARNING_RULES.uiTexts.buttons.summary.learnMore[langugae];
+}
+
+// setUiText(uiLang);
+
 // let currentSessionStats = new Map();
+
+loadProgress();
+setUiText(uiLang);
 
 function navigate(screenName) {
   homeScreen.classList.add("hidden");
@@ -284,39 +343,80 @@ function getSessionCardStats(card) {
   return sessionState.sessionCards.get(card.id);
 }
 
+// function calculateWordScore(results) {
+//   if (!Array.isArray(results) || results.length === 0) {
+//     return 0;
+//   }
+
+//   const MAX_HISTORY = 5;
+//   const MAX_RESULT = 20;
+//   const SCALE = 100 / MAX_RESULT; // = 5
+
+//   const lastResults = results.slice(-MAX_HISTORY);
+
+//   const resultsNormalized = lastResults.map((value) => {
+//     const num = Number(value);
+//     if (Number.isNaN(num)) return 0;
+//     return Math.max(0, Math.min(20, num));
+//   });
+
+//   let weightedSum = 0;
+//   let weightSum = 0;
+
+//   for (let i = 0; i < resultsNormalized.length; i++) {
+//     const weight = (i + 1) ** 1.7;
+//     weightedSum += resultsNormalized[i] * weight;
+//     weightSum += weight;
+//   }
+
+//   const weightedAverage = weightedSum / weightSum;
+
+//   const confidence = resultsNormalized.length / MAX_HISTORY;
+//   const finalScore = Math.round(weightedAverage * SCALE);
+
+//   return Math.round(finalScore);
+// }
+
 function calculateWordScore(results) {
   if (!Array.isArray(results) || results.length === 0) {
-    return 0;
+    return 1;
   }
 
   const MAX_HISTORY = 5;
   const MAX_RESULT = 20;
-  const SCALE = 100 / MAX_RESULT; // = 5
+  const MIN_SCORE = 1;
+  const MAX_SCORE = 100;
+  const NEUTRAL_SCORE = 50;
 
   const lastResults = results.slice(-MAX_HISTORY);
 
   const resultsNormalized = lastResults.map((value) => {
     const num = Number(value);
     if (Number.isNaN(num)) return 0;
-    return Math.max(0, Math.min(20, num));
+    return Math.max(0, Math.min(MAX_RESULT, num));
   });
 
   let weightedSum = 0;
   let weightSum = 0;
 
   for (let i = 0; i < resultsNormalized.length; i++) {
-    const weight = (i + 1) ** 1.7;
+    const weight = (i + 1) ** 1.5; // increase so later answers count more
     weightedSum += resultsNormalized[i] * weight;
     weightSum += weight;
   }
 
-  const weightedAverage = weightedSum / weightSum;
+  const weightedAverage = weightedSum / weightSum; // 0–20
+  const baseScore = (weightedAverage / MAX_RESULT) * MAX_SCORE; // 0–100
 
-  const confidence = resultsNormalized.length / MAX_HISTORY;
+  const answerCount = resultsNormalized.length;
+  const historyFactor = 0.6 + 0.4 * (answerCount / MAX_HISTORY);
+  // 1 answer = 0.68, 5 answers = 1.0 lower for stronger penalty. the more answers
+  // the more "pure" is the score. less scores pull towards Neutral score.
 
-  const finalScore = weightedAverage * SCALE * confidence;
+  const finalScore =
+    baseScore * historyFactor + NEUTRAL_SCORE * (1 - historyFactor);
 
-  return Math.round(finalScore);
+  return Math.max(MIN_SCORE, Math.min(MAX_SCORE, Math.round(finalScore)));
 }
 
 function getSessionSummaryFromStats() {
@@ -345,8 +445,6 @@ function getSessionSummaryFromStats() {
 
     const finalScore = calculateWordScore(sessionCard.scores);
 
-    console.log(finalScore);
-
     return {
       ...sessionCard,
       question: card.question,
@@ -373,48 +471,41 @@ function saveSessionStats(
 
   if (isFirstTry) {
     sessionCard.engagements += 1;
-    sessionCard.firstAnswers.push(answerCategory.label);
-    sessionState.sessionStats.allSessionAnswers.push(answerCategory.label);
+    sessionCard.firstAnswers.push(ANSWERS_CATEGORIES[answerCategory].label);
+    sessionState.sessionStats.allSessionAnswers.push(
+      ANSWERS_CATEGORIES[answerCategory].label,
+    );
     sessionCard.scores.push(score);
   }
 
   if (correctAns) {
     sessionState.sessionStats.allSessionTimes.push(Math.floor(duration));
     sessionCard.recalls.push({
-      category: answerCategory.label,
+      category: ANSWERS_CATEGORIES[answerCategory].label,
       time: Math.floor(duration),
     });
   }
-  console.log(
-    sessionCard,
-    sessionState.sessionStats.allSessionTimes,
-    sessionState.sessionStats.allSessionAnswers,
-  );
 }
 
 function renderSummary() {
-  console.log(sessionState.sessionStats.allSessionAnswers);
   const sessionTimeMs = performance.now() - sessionStartTime;
   const sessionTime = msToTime(sessionTimeMs);
   const enriched = getSessionSummaryFromStats();
   const uniqueWords = enriched.length;
-  const unkownWords = enriched.filter((word) => word.wordLevel === 1);
+  // const unkownWords = enriched.filter((word) => word.wordLevel === 1);
   const newWords = enriched.filter((word) => word.newWord);
   const learnedNewWords = enriched.filter((word) => word.learnedNew);
   const improvedWords = enriched.filter((word) => word.improved);
 
-  console.log(enriched);
-  console.log(unkownWords);
-
   const totalQuestions = sessionState.sessionStats.allSessionAnswers.length;
 
-  const lateCorrects = sessionState.sessionStats.allSessionAnswers.filter(
-    (category) => category === ANSWERS_CATEGORIES.LATE_CORRECT.label,
-  );
+  // const lateCorrects = sessionState.sessionStats.allSessionAnswers.filter(
+  //   (category) => category === ANSWER_KEYS.LATE_CORRECT,
+  // );
 
   const correctGuesses = sessionState.sessionStats.allSessionAnswers.filter(
-    (category) => category === ANSWERS_CATEGORIES.CORRECT_GUESS.label,
-  );
+    (answer) => answer === ANSWERS_CATEGORIES.CORRECT_GUESS.label,
+  ).length;
 
   const avgSessionRecallTime =
     sessionState.sessionStats.allSessionTimes.length > 0
@@ -428,11 +519,15 @@ function renderSummary() {
 
   const longestCorrectStreak = longestStreak(
     sessionState.sessionStats.allSessionAnswers,
-    CORRECT_CATEGORIES,
+    KNOW_CATEGORIES,
   );
 
   const totalSessionPassed = sessionState.sessionStats.allSessionAnswers.filter(
-    (category) => CORRECT_CATEGORIES.has(category),
+    (answer) => CORRECT_CATEGORIES.has(answer),
+  ).length;
+
+  const totalSessionKnown = sessionState.sessionStats.allSessionAnswers.filter(
+    (answer) => KNOW_CATEGORIES.has(answer),
   ).length;
 
   const totalSessionNotPassed = totalQuestions - totalSessionPassed;
@@ -444,20 +539,23 @@ function renderSummary() {
   const strongestWord = sortedWordsByScore[0] ?? null;
   const weakestWord = sortedWordsByScore.at(-1) ?? null;
 
-  console.log(sortedWordsByScore);
   summaryCon.innerHTML = `
-   <div class ="summary_line"><div class="summary_label">Total Session Duration:</div><div class="summary_stat"> ${sessionTime}</div></div>
-  <div class ="summary_line"><div class="summary_label">Total Questions Answered:</div><div class="summary_stat"> ${totalQuestions}</div></div>
-  <div class ="summary_line"><div class="summary_label">Total Questions Passed:</div><div class="summary_stat"> ${totalSessionPassed} (Guesses:${correctGuesses.length})</div></div>
-  <div class ="summary_line"><div class="summary_label">Total questions failed:</div><div class="summary_stat"> ${totalSessionNotPassed} (Wrong:${totalSessionNotPassed - lateCorrects.length}, Late:${lateCorrects.length})</div></div>
-  <div class ="summary_line"><div class="summary_label">Average Answer Time:</div><div class="summary_stat"> ${avgSessionRecallSeconds}</div></div>
-  <div class ="summary_line"><div class="summary_label">Longest Correct Streak:</div><div class="summary_stat"> ${longestCorrectStreak}</div></div>
-  <div class ="summary_line"><div class="summary_label">Unique Words Practiced:</div><div class="summary_stat"> ${uniqueWords}</div></div>
-  <div class ="summary_line"><div class="summary_label">Words improved:</div><div class="summary_stat"> ${improvedWords.length}</div></div>
-  <div class ="summary_line"><div class="summary_label">New Words Appeared:</div><div class="summary_stat">${newWords.length} </div></div>
-  <div class ="summary_line"><div class="summary_label">New Words Learned:</div><div class="summary_stat">${learnedNewWords.length} </div></div>
-  <div class ="summary_line"><div class="summary_label">Strongest Word This Session:</div><div class="summary_stat">${strongestWord.question} </div></div>
-  <div class ="summary_line"><div class="summary_label">Weakest Word This Session:</div><div class="summary_stat">${weakestWord.question} </div></div>
+  <div class="summary_con ${uiLang === "he" ? "rtl" : "ltr"}">
+  <h1 class="summary_header">${LEARNING_RULES.uiTexts.summaryHeader[uiLang]}</h1>
+   <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.sessionDuration[uiLang]}</label><label class="summary_stat"> ${sessionTime}</label></div>
+  <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.totalQuestions[uiLang]}</label><label class="summary_stat"> ${totalQuestions}</label></div>
+  <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.totalKnown[uiLang]}</label><label class="summary_stat"> ${totalSessionKnown}</label></div>
+  <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.correctGuesses[uiLang]}</label><label class="summary_stat"> ${correctGuesses}</label></div>
+  <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.totalFailed[uiLang]}</label><label class="summary_stat"> ${totalSessionNotPassed}</label></div>
+  <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.avgRecallTime[uiLang]}</label><label class="summary_stat"> ${avgSessionRecallSeconds}</label></div>
+  <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.longestStrike[uiLang]}</label><label class="summary_stat"> ${longestCorrectStreak}</label></div>
+  <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.uniqueWords[uiLang]}</label><label class="summary_stat"> ${uniqueWords}</label></div>
+  <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.improved[uiLang]}</label><label class="summary_stat"> ${improvedWords.length}</label></div>
+  <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.newWords[uiLang]}</label><label class="summary_stat">${newWords.length} </label></div>
+  <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.newLearned[uiLang]}</label><label class="summary_stat">${learnedNewWords.length} </label></div>
+  <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.strongest[uiLang]}</label><label class="summary_stat">${sortedWordsByScore.length > 0 ? strongestWord.question : ""} </label></div>
+  <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.weakest[uiLang]}</label><label class="summary_stat">${sortedWordsByScore.length > 0 ? weakestWord.question : ""} </label></div>
+  </div>
 `;
 }
 
@@ -495,37 +593,6 @@ function enableOverlayInteractions() {
   }
 }
 
-// function showMeaning(card, speedAvg, onDone) {
-//   pendingNext = onDone;
-//   overlayMinTimeDone = false;
-//   const answerKey = roundState.roundFlip ? "question" : "answer";
-
-//   showAnswersCircles(card);
-//   overlayWord.textContent = card.question;
-//   overlayText.textContent = card[answerKey];
-//   overlayTime.textContent = `זמן מענה: ${msToSeconds(
-//     Object.values(card.recalls.at(-1))[0],
-//   )} שניות`;
-//   overlayAvg.textContent = `זמן מענה ממוצע: ${msToSeconds(speedAvg)} שניות`;
-//   overlayCooldown.textContent = `זמן קולדאון: ${msToTime(card.coolDown)}`;
-
-//   overlayExample.textContent = LEARNING_RULES.stageSettings[card.wordLevel]
-//     .example
-//     ? card.example || "..."
-//     : "";
-
-//   overlay.classList.add("show");
-
-//   clearTimeout(overlayTimeout);
-//   overlayTimeout = setTimeout(() => {
-//     overlayMinTimeDone = true;
-
-//     if (!isHolding) {
-//       finishOverlay();
-//     }
-//   }, 1000);
-// }
-
 function showMeaning(card, speedAvg, onDone) {
   pendingNext = onDone;
   overlayMinTimeDone = false;
@@ -539,9 +606,18 @@ function showMeaning(card, speedAvg, onDone) {
   const lastRecallMs = lastRecall ? Object.values(lastRecall)[0] : 0;
   const avgMs = typeof speedAvg === "number" ? speedAvg : 0;
 
-  overlayTime.textContent = `זמן מענה: ${msToSeconds(lastRecallMs)} שניות`;
-  overlayAvg.textContent = `זמן מענה ממוצע: ${msToSeconds(avgMs)} שניות`;
-  overlayCooldown.textContent = `זמן קולדאון: ${msToTime(card.coolDown)}`;
+  overlayTime.textContent =
+    FEEDBACK_MEESAGES.overlay.time[uiLang] +
+    msToSeconds(lastRecallMs) +
+    " " +
+    FEEDBACK_MEESAGES.overlay.units[uiLang];
+  overlayAvg.textContent =
+    FEEDBACK_MEESAGES.overlay.avgTime[uiLang] +
+    msToSeconds(avgMs) +
+    " " +
+    FEEDBACK_MEESAGES.overlay.units[uiLang];
+  overlayCooldown.textContent =
+    FEEDBACK_MEESAGES.overlay.cooldownTime[uiLang] + msToTime(card.coolDown);
 
   overlayExample.textContent = LEARNING_RULES.stageSettings[card.wordLevel]
     .example
@@ -675,7 +751,8 @@ function renderQuestion(card) {
 }
 
 function updateWordStats(card) {
-  levelText.textContent = LEARNING_RULES.stageSettings[card.wordLevel].status;
+  levelText.textContent =
+    LEARNING_RULES.uiTexts.wordStatus[card.wordLevel][uiLang];
   difArrow.style.left = `${getDiffArrowPosition(card)}%`;
   if (roundState.submitted) {
     starsFill.classList.add("animate-fill");
@@ -819,7 +896,7 @@ function handleAnswerOutcome(card, selected, result) {
 }
 
 function handleCorrectAnswer(card, category, speedAvg) {
-  applyCorrectFeedbackStyles(category.label);
+  applyCorrectFeedbackStyles(category);
   runCorrectAnswerFlow(card, category, speedAvg);
 }
 
@@ -841,13 +918,13 @@ function runCorrectAnswerFlow(card, category, speedAvg) {
 function handleFirstTryCorrect(card, category) {
   if (checkLevelBoost(card)) card.levelStreak += 1;
 
-  if (category.label === ANSWERS_CATEGORIES.CORRECT_GUESS.label) {
+  if (category === ANSWER_KEYS.CORRECT_GUESS) {
     correctGuesses += 1;
     totalGuesses += 1;
     if (card.engaged === 1) {
       card.wordLevel = 1;
     }
-  } else if (category.passed) {
+  } else if (ANSWERS_CATEGORIES[category].passed) {
     const stage = LEARNING_RULES.stageSettings[card.wordLevel];
     const maxLevel = getMaxWordLevel();
 
@@ -880,7 +957,7 @@ function handleFirstTryCorrect(card, category) {
 }
 
 function handleFirstTryWrong(card, category) {
-  if (category.label === ANSWERS_CATEGORIES.WRONG.WRONG_GUESS.label) {
+  if (category === ANSWER_KEYS.WRONG_GUESS) {
     totalGuesses += 1;
   }
   roundState.firstTry = false;
@@ -912,7 +989,7 @@ function handleWrongAnswer(card, category) {
 }
 
 function applyCooldown(card, category) {
-  const cooldown = calculateCooldown(card, category.label);
+  const cooldown = calculateCooldown(card, category);
 
   card.coolDown = cooldown;
   card.cooldownUntil = Date.now() + cooldown;
@@ -1004,10 +1081,13 @@ function getAnswerResult(card, selected, mode) {
 function applyAnswerState(card, result) {
   const { correctAns, duration, answerCategory } = result;
   const score = correctAns ? calcScore(answerCategory, card) : 0;
-
+  console.log(score);
   if (correctAns) {
-    card.recalls.push({ [answerCategory.label]: Math.floor(duration) });
+    card.recalls.push({
+      [ANSWERS_CATEGORIES[answerCategory].label]: Math.floor(duration),
+    });
   }
+  console.log(card);
 
   saveSessionStats(
     card,
@@ -1023,11 +1103,11 @@ function applyAnswerState(card, result) {
   if (roundState.firstTry) {
     card.engaged += 1;
     totalQs += 1;
-    updateFeedbackGrid(answerCategory.label);
+    updateFeedbackGrid(ANSWERS_CATEGORIES[answerCategory].label);
 
     card.scores.push(score);
     if (card.scores.length > 20) card.scores.shift();
-    card.firstAnswersHistory.push(answerCategory.label);
+    card.firstAnswersHistory.push(ANSWERS_CATEGORIES[answerCategory].label);
   }
 
   roundState.currentTries++;
@@ -1056,7 +1136,7 @@ function applyCorrectScore() {
 }
 
 function getMessage(category, currentTries) {
-  const message = category.msg;
+  const message = FEEDBACK_MEESAGES.answers[category][uiLang];
   return typeof message === "function" ? message(currentTries) : message;
 }
 
@@ -1076,16 +1156,17 @@ function scheduleCorrectFeedbackReset() {
 }
 
 function applyCorrectFeedbackStyles(category) {
-  if (category === ANSWERS_CATEGORIES.LATE_CORRECT.label) {
+  if (category === ANSWER_KEYS.LATE_CORRECT) {
     feedbackBg.classList.add("late_bg");
   } else if (
-    category === ANSWERS_CATEGORIES.FIRST_CORRECT.label ||
-    category === ANSWERS_CATEGORIES.FAST_CORRECT.label ||
-    category === ANSWERS_CATEGORIES.SLOW_CORRECT.label ||
-    category === ANSWERS_CATEGORIES.CORRECT_GUESS.label
+    category === ANSWER_KEYS.VERY_FAST_CORRECT ||
+    category === ANSWER_KEYS.FIRST_CORRECT ||
+    category === ANSWER_KEYS.FAST_CORRECT ||
+    category === ANSWER_KEYS.SLOW_CORRECT ||
+    category === ANSWER_KEYS.CORRECT_GUESS
   ) {
     feedbackBg.classList.add("correct_bg");
-  } else if (category === ANSWERS_CATEGORIES.RECOVERY_CORRECT.label) {
+  } else if (category === ANSWER_KEYS.RECOVERY_CORRECT) {
     feedbackBg.classList.add("late_bg");
   }
   scheduleCorrectFeedbackReset();
@@ -1123,10 +1204,7 @@ function dimAnswer(selection) {
 }
 
 function calcScore(answerCategory, card) {
-  console.log(answerCategory);
-  const categoryScore = answerCategory.score;
-  console.log(categoryScore, card);
-  console.log(LEARNING_RULES.stageSettings);
+  const categoryScore = ANSWERS_CATEGORIES[answerCategory].score;
   const roundBonus = LEARNING_RULES.stageSettings[card.wordLevel].score;
   const score = Math.min(20, Math.round(categoryScore + roundBonus));
 
@@ -1198,7 +1276,7 @@ function getSelectedAnswer() {
 
 function showNoSelectionMessage() {
   roundState.btnDisabled = false;
-  showMsg("לא נבחרה תשובה");
+  showMsg(FEEDBACK_MEESAGES.noAnswer[uiLang]);
   setTimeout(() => {
     bubble.classList.add("invisible");
     feedback.textContent = "";
@@ -1355,7 +1433,7 @@ function onSubmit(e) {
   }
 
   const result = getAnswerResult(card, selected, mode);
-
+  console.log(result);
   applyAnswerState(card, result, mode);
   handleAnswerOutcome(card, selected, result);
 }
@@ -1431,6 +1509,8 @@ function startApp() {
   // startBtn.style.display = "none";
 
   endSessionBtn.classList.add("inactive");
+  sessionStarted = false;
+
   // endSessionBtn.disabled = true;
 
   if (sessionClock) clearInterval(sessionClock);
@@ -1440,16 +1520,13 @@ function startApp() {
   // currentSessionStats = new Map();
 
   feedGrid.textContent = "";
-  loadProgress();
+  // loadProgress();
   resetState();
   renderStats();
   startSessionTimer();
 }
 
 function updateUI() {
-  // console.log(currentSession);
-  // console.log(currentSessionStats);
-  // console.log(currentSessionArr);
   if (roundState.roundFlip) flipLogo.style.display = "block";
   animatePop(qText);
   knowOrGuess.classList.add("hidden");
@@ -1475,6 +1552,12 @@ list.addEventListener("change", (e) => {
       submitMainBtn.classList.remove("inactive");
     }
   }
+});
+
+langugaeBtn.addEventListener("click", () => {
+  uiLang === "en" ? (uiLang = "he") : (uiLang = "en");
+  setUiText(uiLang);
+  saveProgress();
 });
 
 resetbtn.addEventListener("click", () => {
@@ -1518,9 +1601,9 @@ endSessionBtn.addEventListener("click", () => {
     navigate("summary");
   } else {
     if (roundState.firstTry) {
-      showMsg("אין לי נתונים להציג");
+      showMsg(FEEDBACK_MEESAGES.sessionError.noData[uiLang]);
     } else {
-      showMsg("ענה על השאלה בכדי לסיים את הסשן");
+      showMsg(FEEDBACK_MEESAGES.sessionError.notResolved[uiLang]);
     }
     setTimeout(() => {
       bubble.classList.add("invisible");
