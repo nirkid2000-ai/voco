@@ -1,6 +1,9 @@
 "use strict";
 
 import data from "./latvian2.js";
+// import latvianData from "./latvian2.js";
+// import spanishData from "./spanish.js";
+// import englishData from "./en3.js";
 
 import { LEARNING_RULES } from "./learningRules.js";
 

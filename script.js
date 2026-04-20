@@ -48,9 +48,11 @@ const homeScreen = document.getElementById("home-screen");
 const appScreen = document.getElementById("app-screen");
 const summaryScreen = document.getElementById("summary-screen");
 
+const languageSelection = document.querySelector(".language_selection");
+
 const homeStartBtn = document.getElementById("home-start-btn");
 const studyMoreBtn = document.getElementById("study-more-btn");
-const langugaeBtn = document.querySelector(".languge_btn");
+const langugaeBtn = document.querySelector(".language_ui_btn");
 
 const backHomeBtn = document.getElementById("back_home_btn");
 const endSessionBtn = document.getElementById("end_session_btn");
@@ -87,8 +89,10 @@ const blindRecallLogo = document.querySelector(".blind_recall");
 const blindCounter = document.querySelector(".blind_counter");
 const flipLogo = document.querySelector(".flip_logo");
 const feedGrid = document.querySelector(".fb_grid");
+const summaryGrid = document.querySelector(".summary_grid");
 // const startBtn = document.querySelector(".start");
 const overlay = document.querySelector(".meaning_overlay");
+const pin = document.querySelector(".pin");
 const overlayWord = document.querySelector(".meaning_word");
 const overlayText = document.querySelector(".meaning_text");
 const overlayExample = document.querySelector(".meaning_example");
@@ -98,7 +102,9 @@ const overlayCooldown = document.querySelector(".next_cooldown");
 const lastAnswers = document.querySelector(".last_answers");
 const bubble = document.querySelector(".bubble_wrap");
 
-const summaryCon = document.querySelector(".summary_wrap");
+const mainCrow = document.getElementById("main_crow");
+
+const summaryCon = document.querySelector(".summary_stats");
 
 const circle = document.getElementById("progressCircle");
 const radius = 45;
@@ -135,10 +141,10 @@ function saveProgress() {
     ]),
   );
 
-  const langugae = uiLang;
+  const Uilangugae = uiLang;
 
   const state = {
-    langugae,
+    Uilangugae,
     cardsProgress,
     globalScore,
     globalStreak,
@@ -181,7 +187,7 @@ function loadProgress() {
 
     buildCardsLookup();
 
-    uiLang = state.langugae ?? "he";
+    uiLang = state.Uilangugae ?? "he";
 
     globalScore = state.globalScore ?? 0;
     globalStreak = state.globalStreak ?? 0;
@@ -263,6 +269,7 @@ let pendingNext = null;
 let overlayMinTimeDone = false;
 
 let uiLang = "he";
+let courseLang;
 
 let sessionStarted;
 
@@ -515,7 +522,9 @@ function renderSummary() {
         ) / sessionState.sessionStats.allSessionTimes.length
       : 0;
 
-  const avgSessionRecallSeconds = (avgSessionRecallTime / 1000).toFixed(2);
+  const avgSessionRecallSeconds = (avgSessionRecallTime / 1000)
+    .toFixed(2)
+    .replace(".", ":");
 
   const longestCorrectStreak = longestStreak(
     sessionState.sessionStats.allSessionAnswers,
@@ -547,7 +556,7 @@ function renderSummary() {
   <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.totalKnown[uiLang]}</label><label class="summary_stat"> ${totalSessionKnown}</label></div>
   <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.correctGuesses[uiLang]}</label><label class="summary_stat"> ${correctGuesses}</label></div>
   <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.totalFailed[uiLang]}</label><label class="summary_stat"> ${totalSessionNotPassed}</label></div>
-  <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.avgRecallTime[uiLang]}</label><label class="summary_stat"> ${avgSessionRecallSeconds}</label></div>
+  <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.avgRecallTime[uiLang]}</label><label class="summary_stat"> ${avgSessionRecallSeconds}${FEEDBACK_MEESAGES.overlay.units[uiLang]}</label></div>
   <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.longestStrike[uiLang]}</label><label class="summary_stat"> ${longestCorrectStreak}</label></div>
   <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.uniqueWords[uiLang]}</label><label class="summary_stat"> ${uniqueWords}</label></div>
   <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.improved[uiLang]}</label><label class="summary_stat"> ${improvedWords.length}</label></div>
@@ -567,33 +576,50 @@ function stopSession() {
 
 //overlay
 
-function holdStart() {
-  isHolding = true;
-}
+let isPinned = false;
 
-function holdEnd() {
-  if (!isHolding) return;
-  isHolding = false;
+function togglePin() {
+  isPinned = !isPinned;
+  if (isPinned) {
+    console.log("pinned");
+    pin.style.display = "flex";
+  }
 
-  // Hover/touch can extend visibility, but never shorten it.
-  if (overlayMinTimeDone) {
+  if (!isPinned && overlayMinTimeDone) {
     finishOverlay();
   }
 }
 
-function enableOverlayInteractions() {
-  if (INPUT_TYPE === "touch") {
-    overlay.addEventListener("pointerdown", holdStart);
-    overlay.addEventListener("pointerup", holdEnd);
-    overlay.addEventListener("pointerleave", holdEnd);
-    overlay.addEventListener("pointercancel", holdEnd);
-  } else {
-    overlay.addEventListener("mouseenter", holdStart);
-    overlay.addEventListener("mouseleave", holdEnd);
-  }
+// function holdStart() {
+//   isHolding = true;
+// }
+
+// function holdEnd() {
+//   if (!isHolding) return;
+//   isHolding = false;}
+
+// Hover/touch can extend visibility, but never shorten it.
+if (overlayMinTimeDone) {
+  finishOverlay();
 }
 
-function showMeaning(card, speedAvg, onDone) {
+function enableOverlayInteractions() {
+  overlay.addEventListener("click", togglePin);
+}
+
+// function enableOverlayInteractions() {
+//   if (INPUT_TYPE === "touch") {
+//     overlay.addEventListener("pointerdown", holdStart);
+//     overlay.addEventListener("pointerup", holdEnd);
+//     overlay.addEventListener("pointerleave", holdEnd);
+//     overlay.addEventListener("pointercancel", holdEnd);
+//   } else {
+//     overlay.addEventListener("mouseenter", holdStart);
+//     overlay.addEventListener("mouseleave", holdEnd);
+//   }
+// }
+
+function showMeaning(card, category, speedAvg, onDone) {
   pendingNext = onDone;
   overlayMinTimeDone = false;
   const answerKey = roundState.roundFlip ? "question" : "answer";
@@ -625,22 +651,25 @@ function showMeaning(card, speedAvg, onDone) {
     : "";
 
   overlay.classList.add("show");
+  qText.classList.add("on_top");
 
   clearTimeout(overlayTimeout);
   overlayTimeout = setTimeout(() => {
     overlayMinTimeDone = true;
 
-    if (!isHolding) {
+    if (!isPinned) {
       finishOverlay();
     }
-  }, 1000);
+  }, ANSWERS_CATEGORIES[category].overlayDuration);
 }
 
 function finishOverlay() {
+  qText.classList.remove("on_top");
+  pin.style.display = "none";
   clearTimeout(overlayTimeout);
   overlayTimeout = null;
   overlayMinTimeDone = false;
-  isHolding = false;
+  isPinned = false;
 
   overlay.classList.remove("show");
 
@@ -909,7 +938,7 @@ function runCorrectAnswerFlow(card, category, speedAvg) {
   renderStats();
   stopQuestionTimers();
 
-  showMeaning(card, speedAvg, () => {
+  showMeaning(card, category, speedAvg, () => {
     finalizeCorrectFeedbackUI();
     resetState();
   });
@@ -1145,14 +1174,14 @@ function showMsg(text) {
   feedback.textContent = text;
 }
 
-function scheduleCorrectFeedbackReset() {
+function scheduleCorrectFeedbackReset(category) {
   clearTimeout(correctFeedbackTimeout);
 
   correctFeedbackTimeout = setTimeout(() => {
     bubble.classList.add("invisible");
     feedbackBg.classList.remove("correct_bg");
     feedbackBg.classList.remove("late_bg");
-  }, 1000);
+  }, ANSWERS_CATEGORIES[category].overlayDuration);
 }
 
 function applyCorrectFeedbackStyles(category) {
@@ -1163,13 +1192,15 @@ function applyCorrectFeedbackStyles(category) {
     category === ANSWER_KEYS.FIRST_CORRECT ||
     category === ANSWER_KEYS.FAST_CORRECT ||
     category === ANSWER_KEYS.SLOW_CORRECT ||
-    category === ANSWER_KEYS.CORRECT_GUESS
+    category === ANSWER_KEYS.CORRECT_GUESS ||
+    category === ANSWER_KEYS.RECOVERY_CORRECT
   ) {
     feedbackBg.classList.add("correct_bg");
-  } else if (category === ANSWER_KEYS.RECOVERY_CORRECT) {
-    feedbackBg.classList.add("late_bg");
   }
-  scheduleCorrectFeedbackReset();
+  // } else if (category === ANSWER_KEYS.RECOVERY_CORRECT) {
+  //   feedbackBg.classList.add("late_bg");
+  // }
+  scheduleCorrectFeedbackReset(category);
 }
 
 function finalizeCorrectFeedbackUI() {
@@ -1234,6 +1265,7 @@ function updateFeedbackGrid(answerCategoryLabel) {
   cube.classList.add("cube");
   cube.classList.add(answerCategoryLabel);
   feedGrid.append(cube);
+  summaryGrid.append(cube);
   const allCubes = document.getElementsByClassName("cube");
   const numberOfCubes = allCubes.length;
   for (const cube of allCubes) {
@@ -1272,6 +1304,10 @@ function showAnswersCircles(card) {
 
 function getSelectedAnswer() {
   return document.querySelector('input[name="answer"]:checked');
+}
+
+function getSelectedLanguage() {
+  return document.querySelector('input[name="language"]:checked');
 }
 
 function showNoSelectionMessage() {
@@ -1438,6 +1474,18 @@ function onSubmit(e) {
   handleAnswerOutcome(card, selected, result);
 }
 
+function onStart(e) {
+  e.preventDefault();
+  const selected = getSelectedLanguage();
+  if (!selected) {
+    return;
+  }
+  courseLang = selected;
+  console.log(courseLang.value);
+  navigate("app");
+  startApp();
+}
+
 function resetState() {
   if (correctFeedbackTimeout) clearTimeout(correctFeedbackTimeout);
   if (overlayTimeout) clearTimeout(overlayTimeout);
@@ -1554,6 +1602,12 @@ list.addEventListener("change", (e) => {
   }
 });
 
+languageSelection.addEventListener("change", (e) => {
+  if (e.target.name === "language") {
+    homeStartBtn.classList.add("enable_start");
+  }
+});
+
 langugaeBtn.addEventListener("click", () => {
   uiLang === "en" ? (uiLang = "he") : (uiLang = "en");
   setUiText(uiLang);
@@ -1572,10 +1626,7 @@ submitButtons.forEach((button) => {
 removeWordBtn.addEventListener("click", removeWord);
 // startBtn.addEventListener("click", startApp);
 
-homeStartBtn.addEventListener("click", () => {
-  navigate("app");
-  startApp();
-});
+homeStartBtn.addEventListener("click", onStart);
 
 studyMoreBtn.addEventListener("click", () => {
   navigate("app");
@@ -1623,3 +1674,37 @@ function animatePop(el) {
 startAnimations();
 
 navigate("home");
+
+// api sentences
+
+mainCrow.addEventListener("click", async () => {
+  const data = await getExampleSentence(chosenCard.question, chosenCard.answer);
+  console.log(data);
+  showMsg(data.sentence);
+});
+
+async function getExampleSentence(word, meaning = "", partOfSpeech = "") {
+  const res = await fetch("http://localhost:3001/example-sentence", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      word,
+      meaning,
+      partOfSpeech,
+      level: "A2",
+      nativeLanguage: "Hebrew",
+    }),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => null);
+    throw new Error(errorData?.message || errorData?.error || "Request failed");
+  }
+
+  return res.json();
+}
+// const data = await getExampleSentence("old", "ישן", "שם תואר");
+
+// console.log(data);

@@ -335,51 +335,61 @@ export const ANSWERS_CATEGORIES = {
     passed: true,
     label: "veryFastCorrect",
     score: 12,
+    overlayDuration: 1500,
   },
   FAST_CORRECT: {
     passed: true,
     label: "fastCorrect",
     score: 10,
+    overlayDuration: 1500,
   },
   FIRST_CORRECT: {
     passed: true,
     label: "correct",
     score: 7,
+    overlayDuration: 2000,
   },
   SLOW_CORRECT: {
     passed: true,
     label: "slowCorrect",
     score: 4,
+    overlayDuration: 2000,
   },
   LATE_CORRECT: {
     passed: false,
     label: "lateCorrect",
     score: 2,
+    overlayDuration: 2500,
   },
   RECOVERY_CORRECT: {
     passed: false,
     label: "recoveryCorrect",
     score: 0,
+    overlayDuration: 3500,
   },
   CORRECT_GUESS: {
     passed: true,
     label: "correctGuess",
     score: 4,
+    overlayDuration: 2500,
   },
   WRONG_GUESS: {
     passed: false,
     label: "wrongGuess",
     score: 0,
+    overlayDuration: 5000,
   },
   WRONG_ANSWER: {
     passed: false,
     label: "wrongAnswer",
     score: 0,
+    overlayDuration: 5000,
   },
   STRONG_WRONG: {
     passed: false,
     label: "strongWrong",
     score: 0,
+    overlayDuration: 5000,
   },
 };
 
