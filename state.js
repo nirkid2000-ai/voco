@@ -1,9 +1,9 @@
 "use strict";
 
-import data from "./latvian2.js";
-// import latvianData from "./latvian2.js";
-// import spanishData from "./spanish.js";
-// import englishData from "./en3.js";
+// import data from "./latvian2.js";
+import latvianData from "./latvianboth.js";
+import spanishData from "./spanishboth.js";
+import englishData from "./en200.js";
 
 import { LEARNING_RULES } from "./learningRules.js";
 
@@ -29,11 +29,24 @@ export function createDefaultProgress() {
   };
 }
 
-export function createInitialCards() {
+function loadSelectedCourse(course) {
+  if (course === "english") {
+    return englishData;
+  } else if (course === "latvian") return latvianData;
+  else if (course === "spanish") return spanishData;
+  else {
+    console.log("no data found");
+    return englishData;
+  }
+}
+
+export function createInitialCards(course, userLang) {
+  const data = loadSelectedCourse(course);
+  console.log(data, userLang);
   return data.words.map((word, i) => ({
     id: i + 1,
-    question: word.he,
-    answer: word.en,
+    question: word.q,
+    answer: course === "english" ? word.ans["he"] : word.ans[userLang],
     diff: word.level,
     ...createDefaultProgress(),
   }));

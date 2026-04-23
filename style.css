@@ -769,14 +769,14 @@ input[type="radio"] {
   padding-bottom: 100px;
 }
 
-.language_label {
+.course_label {
   display: block;
   transition: 0.2s;
   cursor: pointer;
   padding: 12px 0px;
 }
 
-.language_selection {
+.course_selection {
   margin-top: 20px;
   font-size: 18px;
   width: 100%;
@@ -797,7 +797,7 @@ input[type="radio"] {
   cursor: pointer;
 }
 
-.language_selection li {
+.course_selection li {
   width: 100%;
   list-style: none;
   text-align: center;
@@ -809,14 +809,14 @@ input[type="radio"] {
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .language_selection li:hover {
+  .course_selection li:hover {
     background-color: #5d5d5d;
     width: 150%;
     transition: 0.1s;
   }
 }
 
-.language_selection li:has(input:checked) {
+.course_selection li:has(input:checked) {
   background-color: #00c476;
   width: 150%;
   color: white;

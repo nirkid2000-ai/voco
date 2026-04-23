@@ -8,6 +8,8 @@ export const LEARNING_RULES = {
     pointer: 500,
   },
 
+  maximumRecallDeafult: 60000,
+
   cooldowns: {
     defaultMs: 30000,
     minMs: 1000,
@@ -66,91 +68,6 @@ export const LEARNING_RULES = {
   //   mastered0: 90,
   //   mastered1: 100,
   // },
-
-  uiTexts: {
-    appName: "VOCRO",
-    tagLine: {
-      he: "ללמוד אוצר מילים במהירות ",
-      en: " The fastest way to learn vocabulary",
-    },
-    wordStatus: {
-      0: { he: "מילה חדשה", en: "New Word" },
-      1: { he: "מילה לא מוכרת", en: "Unknown Word" },
-      2: { he: "מילה שאתה מזהה", en: "Word You Recognize" },
-      3: { he: "מילה שאתה מכיר", en: "Word You Know" },
-      4: { he: "מילה שאתה מכיר היטב", en: "Word You Know Well" },
-      5: { he: "מילה שאתה יודע בבטחון", en: "Word You Know Very good" },
-      6: { he: "מילה שאתה שולט בה", en: "Word You Master" },
-    },
-    difficulty: { he: "רמת קושי", en: " Difficulty Level" },
-    masteryLevel: { he: "רמת שליטה", en: "Mastery Level" },
-    timer: { he: "זמן תרגול: ", en: "Session Duration: " },
-    summaryHeader: { he: "סיכום התרגול", en: "Session Summary" },
-    summaryLabels: {
-      sessionDuration: { he: "משך התרגול: ", en: "Session Duration" },
-      totalQuestions: {
-        he: "סה״כ שאלות שהופיעו: ",
-        en: "Total Questions Answered",
-      },
-      totalPassed: { he: "סה״כ שאלות שעברת: ", en: "Total Questions Passed" },
-      totalKnown: {
-        he: "סה״כ שאלות שידעת בזמן: ",
-        en: "Total Questions You Knew On Time",
-      },
-      correctGuesses: {
-        he: "סה״כ שאלות שניחשת נכון: ",
-        en: "Total Questions You Guessed correctly",
-      },
-      totalFailed: {
-        he: "סה״כ שאלות שלא ידעת בזמן: ",
-        en: "Total Questions You Didn't Knew On Time",
-      },
-      avgRecallTime: { he: "זמן מענה ממוצע לשאלה: ", en: "Averge Answer Time" },
-      longestStrike: {
-        he: "רצף התשובות הנכונות הארוך ביותר: ",
-        en: "Longest Correct Streak",
-      },
-      uniqueWords: {
-        he: "מספר המילים השונות שהופיעו: ",
-        en: "Unique Words Practiced:",
-      },
-      improved: { he: "מספר המילים ששיפרת: ", en: "Words improved:" },
-      newWords: {
-        he: "מספר המילים החדשות שהתווספו: ",
-        en: "New Words Appeared:",
-      },
-      newLearned: {
-        he: "מספר המילים החדשות שלמדת: ",
-        en: "New Words Learned:",
-      },
-      strongest: {
-        he: "המילה החזקה ביותר שלך בתרגול: ",
-        en: "Your Strongest Word This Session: ",
-      },
-      weakest: {
-        he: " המילה החלשה ביותר שלך בתרגול: ",
-        en: "Your Weakest Word This Session: ",
-      },
-    },
-    buttons: {
-      home: {
-        start: { he: "התחילו ללמוד ", en: "Start Learning" },
-      },
-      mainApp: {
-        submit: {
-          know: { he: "אני יודע", en: "I Know" },
-          guess: { he: "אני מנחש", en: "I Guess" },
-          main: { he: "בחר תשובה", en: "Select Answer" },
-        },
-        nav: {
-          home: { he: "ראשי", en: "Home" },
-          end: { he: "סיים תרגול", en: "End Session" },
-          reset: { he: "אתחל מערכת", en: "Reset Progress" },
-        },
-      },
-      summary: { learnMore: { he: "יאללה עוד נגלה", en: "One More Session" } },
-    },
-  },
 
   stageSettings: {
     0: {
@@ -335,19 +252,19 @@ export const ANSWERS_CATEGORIES = {
     passed: true,
     label: "veryFastCorrect",
     score: 12,
-    overlayDuration: 1500,
+    overlayDuration: 1200,
   },
   FAST_CORRECT: {
     passed: true,
     label: "fastCorrect",
     score: 10,
-    overlayDuration: 1500,
+    overlayDuration: 1200,
   },
   FIRST_CORRECT: {
     passed: true,
     label: "correct",
     score: 7,
-    overlayDuration: 2000,
+    overlayDuration: 1200,
   },
   SLOW_CORRECT: {
     passed: true,
@@ -365,7 +282,7 @@ export const ANSWERS_CATEGORIES = {
     passed: false,
     label: "recoveryCorrect",
     score: 0,
-    overlayDuration: 3500,
+    overlayDuration: 2500,
   },
   CORRECT_GUESS: {
     passed: true,
@@ -377,19 +294,19 @@ export const ANSWERS_CATEGORIES = {
     passed: false,
     label: "wrongGuess",
     score: 0,
-    overlayDuration: 5000,
+    overlayDuration: 2000,
   },
   WRONG_ANSWER: {
     passed: false,
     label: "wrongAnswer",
     score: 0,
-    overlayDuration: 5000,
+    overlayDuration: 2000,
   },
   STRONG_WRONG: {
     passed: false,
     label: "strongWrong",
     score: 0,
-    overlayDuration: 5000,
+    overlayDuration: 2000,
   },
 };
 

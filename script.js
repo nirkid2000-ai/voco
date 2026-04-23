@@ -38,9 +38,13 @@ import {
   getAvgSpeedFromRecalls,
 } from "./quizHelpers.js";
 
+import { uiTexts, setUiText } from "./texts.js";
+
 // import { Messages } from "/messages.js";
 
 import { startAnimations } from "./animations.js";
+
+console.log("codeBegaun");
 
 // const appName = document.querySelector(".the_name");
 const tagline = document.querySelector(".tagline");
@@ -48,7 +52,10 @@ const homeScreen = document.getElementById("home-screen");
 const appScreen = document.getElementById("app-screen");
 const summaryScreen = document.getElementById("summary-screen");
 
-const languageSelection = document.querySelector(".language_selection");
+const courseSelection = document.querySelector(".course_selection");
+const englishCourseBtn = document.querySelector(".english_course");
+const spanishCourseBtn = document.querySelector(".spanish_course");
+const latvianCourseBtn = document.querySelector(".latvian_course");
 
 const homeStartBtn = document.getElementById("home-start-btn");
 const studyMoreBtn = document.getElementById("study-more-btn");
@@ -68,6 +75,7 @@ const list = document.querySelector(".wordlist");
 const submitMainBtn = document.querySelector(".main_ans");
 const submitKnowBtn = document.querySelector(".know_ans");
 const submitGuessBtn = document.querySelector(".guess_ans");
+
 const timerLabel = document.querySelector(".timer_label");
 const resetbtn = document.querySelector(".reset");
 const knowOrGuess = document.querySelector(".knoworguess");
@@ -110,10 +118,124 @@ const circle = document.getElementById("progressCircle");
 const radius = 45;
 const circumference = 2 * Math.PI * radius;
 
+const uiElements = {
+  countdown,
+  bubble,
+  courseSelection,
+  knowOrGuess,
+  menuBtns,
+  wordTop,
+  tagline,
+  englishCourseBtn,
+  spanishCourseBtn,
+  latvianCourseBtn,
+  homeStartBtn,
+  diffLabel,
+  masteryLabel,
+  submitMainBtn,
+  submitKnowBtn,
+  submitGuessBtn,
+  backHomeBtn,
+  endSessionBtn,
+  resetbtn,
+  timerLabel,
+  studyMoreBtn,
+};
+
 circle.style.strokeDasharray = `${circumference}`;
 circle.style.strokeDashoffset = `0`;
 
-const STORAGE_KEY = "vocab-app-progress-v1";
+const STORAGE_KEY = "vocab-app-progress-v2";
+const UI_LANG_KEY = "vocab-app-ui-lang-v1";
+
+// function saveProgress() {
+//   const cardsProgress = Object.fromEntries(
+//     cards.map((card) => [
+//       card.id,
+//       {
+//         wordLevel: card.wordLevel,
+//         scores: card.scores,
+//         // last5Scores: card.last5Scores,
+//         wordScore: card.wordScore,
+//         engaged: card.engaged,
+//         rightAnswers: card.rightAnswers,
+//         wordStreak: card.wordStreak,
+//         levelStreak: card.levelStreak,
+//         wrongAnswers: card.wrongAnswers,
+//         accuracy: card.accuracy,
+//         wrongTries: card.wrongTries,
+//         recalls: card.recalls,
+//         firstAnswersHistory: card.firstAnswersHistory,
+//         coolDown: card.coolDown,
+//         inCycle: card.inCycle,
+//         cooldownUntil: card.cooldownUntil,
+//         isRemoved: card.isRemoved,
+//       },
+//     ]),
+//   );
+
+//   // const Uilangugae = uiLang;
+
+//   const state = {
+//     course,
+//     uiLang,
+//     cardsProgress,
+//     globalScore,
+//     globalStreak,
+//     correctGuesses,
+//     totalGuesses,
+//     totalCorrect,
+//     totalQs,
+//   };
+
+//   try {
+//     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+//   } catch (err) {
+//     console.error("Failed to save progress:", err);
+//   }
+// }
+
+// function loadProgress(course, uiLang) {
+//   try {
+//     const raw = localStorage.getItem(STORAGE_KEY);
+
+//     cards = createInitialCards(course, uiLang);
+
+//     if (!raw) {
+//       buildCardsLookup();
+//       return;
+//     }
+
+//     const state = JSON.parse(raw);
+//     if (!state) {
+//       buildCardsLookup();
+//       return;
+//     }
+
+//     if (state.cardsProgress) {
+//       cards = cards.map((card) => {
+//         const savedProgress = state.cardsProgress[card.id];
+//         return savedProgress ? { ...card, ...savedProgress } : card;
+//       });
+//     }
+
+//     buildCardsLookup();
+
+//     uiLang = state.uiLang ?? "he";
+//     course = state.course ?? "english";
+
+//     globalScore = state.globalScore ?? 0;
+//     globalStreak = state.globalStreak ?? 0;
+//     correctGuesses = state.correctGuesses ?? 0;
+//     totalGuesses = state.totalGuesses ?? 0;
+//     totalCorrect = state.totalCorrect ?? 0;
+//     totalQs = state.totalQs ?? 0;
+//   } catch (err) {
+//     console.error("Failed to load progress:", err);
+//     cards = createInitialCards(course, uiLang);
+//     buildCardsLookup();
+//   }
+// }
 
 function saveProgress() {
   const cardsProgress = Object.fromEntries(
@@ -122,7 +244,6 @@ function saveProgress() {
       {
         wordLevel: card.wordLevel,
         scores: card.scores,
-        // last5Scores: card.last5Scores,
         wordScore: card.wordScore,
         engaged: card.engaged,
         rightAnswers: card.rightAnswers,
@@ -141,10 +262,7 @@ function saveProgress() {
     ]),
   );
 
-  const Uilangugae = uiLang;
-
   const state = {
-    Uilangugae,
     cardsProgress,
     globalScore,
     globalStreak,
@@ -155,39 +273,45 @@ function saveProgress() {
   };
 
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    const allProgress = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+
+    // 🔑 store under course key
+    allProgress[course] = state;
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(allProgress));
   } catch (err) {
     console.error("Failed to save progress:", err);
   }
 }
 
-function loadProgress() {
+function loadProgress(selectedCourse) {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    course = selectedCourse;
+    cards = createInitialCards(course, uiLang);
 
-    cards = createInitialCards();
+    const allProgress = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
 
-    if (!raw) {
-      buildCardsLookup();
-      return;
-    }
+    const state = allProgress[course];
 
-    const state = JSON.parse(raw);
     if (!state) {
       buildCardsLookup();
+      globalScore = 0;
+      globalStreak = 0;
+      correctGuesses = 0;
+      totalGuesses = 0;
+      totalCorrect = 0;
+      totalQs = 0;
       return;
     }
 
     if (state.cardsProgress) {
       cards = cards.map((card) => {
-        const savedProgress = state.cardsProgress[card.id];
-        return savedProgress ? { ...card, ...savedProgress } : card;
+        const saved = state.cardsProgress[card.id];
+        return saved ? { ...card, ...saved } : card;
       });
     }
 
     buildCardsLookup();
-
-    uiLang = state.Uilangugae ?? "he";
 
     globalScore = state.globalScore ?? 0;
     globalStreak = state.globalStreak ?? 0;
@@ -195,29 +319,57 @@ function loadProgress() {
     totalGuesses = state.totalGuesses ?? 0;
     totalCorrect = state.totalCorrect ?? 0;
     totalQs = state.totalQs ?? 0;
+
+    console.log("progress loaded", course, cards, allProgress, state);
   } catch (err) {
     console.error("Failed to load progress:", err);
-    cards = createInitialCards();
+    cards = createInitialCards(selectedCourse, uiLang);
     buildCardsLookup();
+    globalScore = 0;
+    globalStreak = 0;
+    correctGuesses = 0;
+    totalGuesses = 0;
+    totalCorrect = 0;
+    totalQs = 0;
   }
 }
 
-function resetProgress() {
-  localStorage.removeItem(STORAGE_KEY);
+// function resetProgress(course, uiLang) {
+//   localStorage.removeItem(STORAGE_KEY);
 
-  cards = createInitialCards();
+//   cards = createInitialCards(course, uiLang);
+//   buildCardsLookup();
+//   globalScore = 0;
+//   globalStreak = 0;
+//   correctGuesses = 0;
+//   totalGuesses = 0;
+//   totalCorrect = 0;
+//   totalQs = 0;
+//   list.style.display = "flex";
+//   if (sessionClock) clearInterval(sessionClock);
+// }
+
+function resetProgress() {
+  if (!course) return;
+
+  const allProgress = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+
+  delete allProgress[course];
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(allProgress));
+
+  cards = createInitialCards(course, uiLang);
   buildCardsLookup();
+
   globalScore = 0;
   globalStreak = 0;
   correctGuesses = 0;
   totalGuesses = 0;
   totalCorrect = 0;
   totalQs = 0;
-  list.style.display = "flex";
-  if (sessionClock) clearInterval(sessionClock);
 }
 
-let cards = createInitialCards();
+let cards;
 let cardsById = new Map();
 
 let roundState = {
@@ -264,55 +416,40 @@ let sessionClock;
 
 let overlayTimeout = null;
 let correctFeedbackTimeout = null;
-let isHolding = false;
+// let isHolding = false;
 let pendingNext = null;
 let overlayMinTimeDone = false;
 
 let uiLang = "he";
-let courseLang;
+let course;
 
 let sessionStarted;
 
-function setUiText(langugae) {
-  // appName.textContent = LEARNING_RULES.uiTexts.appName;
-  countdown.classList.remove("countdown_flip");
-  uiLang === "en" ? countdown.classList.add("countdown_flip") : 0;
-  bubble.classList.remove("rtl", "ltr");
-  bubble.classList.add(uiLang === "he" ? "rtl" : "ltr");
-  knowOrGuess.classList.remove("rtl", "ltr");
-  knowOrGuess.classList.add(uiLang === "he" ? "rtl" : "ltr");
-  menuBtns.classList.remove("reverse_flex");
-  menuBtns.classList.add(uiLang === "he" ? "reverse_flex" : "rtl");
-  wordTop.classList.remove("reverse_flex");
-  wordTop.classList.add(uiLang === "he" ? "rtl" : "reverse_flex");
-  tagline.textContent = LEARNING_RULES.uiTexts.tagLine[langugae];
-  homeStartBtn.textContent =
-    LEARNING_RULES.uiTexts.buttons.home.start[langugae];
-  diffLabel.textContent = LEARNING_RULES.uiTexts.difficulty[langugae];
-  masteryLabel.textContent = LEARNING_RULES.uiTexts.masteryLevel[langugae];
-  submitMainBtn.textContent =
-    LEARNING_RULES.uiTexts.buttons.mainApp.submit.main[langugae];
-  submitKnowBtn.textContent =
-    LEARNING_RULES.uiTexts.buttons.mainApp.submit.know[langugae];
-  submitGuessBtn.textContent =
-    LEARNING_RULES.uiTexts.buttons.mainApp.submit.guess[langugae];
-  backHomeBtn.textContent =
-    LEARNING_RULES.uiTexts.buttons.mainApp.nav.home[langugae];
-  endSessionBtn.textContent =
-    LEARNING_RULES.uiTexts.buttons.mainApp.nav.end[langugae];
-  resetbtn.textContent =
-    LEARNING_RULES.uiTexts.buttons.mainApp.nav.reset[langugae];
-  timerLabel.textContent = LEARNING_RULES.uiTexts.timer[langugae];
-  studyMoreBtn.textContent =
-    LEARNING_RULES.uiTexts.buttons.summary.learnMore[langugae];
-}
+// setUiText(course);
 
 // setUiText(uiLang);
 
 // let currentSessionStats = new Map();
 
-loadProgress();
-setUiText(uiLang);
+loadUiLang();
+setUiText(uiLang, uiElements);
+
+function saveUiLang() {
+  try {
+    localStorage.setItem(UI_LANG_KEY, uiLang);
+  } catch (err) {
+    console.error("Failed to save UI language:", err);
+  }
+}
+
+function loadUiLang() {
+  try {
+    const saved = localStorage.getItem(UI_LANG_KEY);
+    if (saved) uiLang = saved;
+  } catch (err) {
+    console.error("Failed to load UI language:", err);
+  }
+}
 
 function navigate(screenName) {
   homeScreen.classList.add("hidden");
@@ -494,21 +631,26 @@ function saveSessionStats(
   }
 }
 
+function summaryLine(label, value) {
+  return `
+    <div class="summary_line">
+      <label class="summary_label">${label}</label>
+      <label class="summary_stat">${value}</label>
+    </div>
+  `;
+}
+
 function renderSummary() {
   const sessionTimeMs = performance.now() - sessionStartTime;
   const sessionTime = msToTime(sessionTimeMs);
   const enriched = getSessionSummaryFromStats();
+
   const uniqueWords = enriched.length;
-  // const unkownWords = enriched.filter((word) => word.wordLevel === 1);
   const newWords = enriched.filter((word) => word.newWord);
   const learnedNewWords = enriched.filter((word) => word.learnedNew);
   const improvedWords = enriched.filter((word) => word.improved);
 
   const totalQuestions = sessionState.sessionStats.allSessionAnswers.length;
-
-  // const lateCorrects = sessionState.sessionStats.allSessionAnswers.filter(
-  //   (category) => category === ANSWER_KEYS.LATE_CORRECT,
-  // );
 
   const correctGuesses = sessionState.sessionStats.allSessionAnswers.filter(
     (answer) => answer === ANSWERS_CATEGORIES.CORRECT_GUESS.label,
@@ -548,25 +690,112 @@ function renderSummary() {
   const strongestWord = sortedWordsByScore[0] ?? null;
   const weakestWord = sortedWordsByScore.at(-1) ?? null;
 
+  const t = uiTexts.summaryLabels;
+  const headerText = uiTexts.summaryHeader[uiLang];
+  const unitText = FEEDBACK_MEESAGES.overlay.units[uiLang];
+
+  const rows = [
+    [t.sessionDuration[uiLang], sessionTime],
+    [t.totalQuestions[uiLang], totalQuestions],
+    [t.totalPassed[uiLang], totalSessionPassed],
+    [t.totalKnown[uiLang], totalSessionKnown],
+    [t.correctGuesses[uiLang], correctGuesses],
+    [t.totalFailed[uiLang], totalSessionNotPassed],
+    [t.avgRecallTime[uiLang], `${avgSessionRecallSeconds} ${unitText}`],
+    [t.longestStreak[uiLang], longestCorrectStreak],
+    [t.uniqueWords[uiLang], uniqueWords],
+    [t.improved[uiLang], improvedWords.length],
+    [t.newWords[uiLang], newWords.length],
+    [t.newLearned[uiLang], learnedNewWords.length],
+    [t.strongest[uiLang], strongestWord ? strongestWord.question : ""],
+    [t.weakest[uiLang], weakestWord ? weakestWord.question : ""],
+  ];
+
+  const rowsHtml = rows
+    .map(([label, value]) => summaryLine(label, value))
+    .join("");
+
   summaryCon.innerHTML = `
   <div class="summary_con ${uiLang === "he" ? "rtl" : "ltr"}">
-  <h1 class="summary_header">${LEARNING_RULES.uiTexts.summaryHeader[uiLang]}</h1>
-   <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.sessionDuration[uiLang]}</label><label class="summary_stat"> ${sessionTime}</label></div>
-  <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.totalQuestions[uiLang]}</label><label class="summary_stat"> ${totalQuestions}</label></div>
-  <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.totalKnown[uiLang]}</label><label class="summary_stat"> ${totalSessionKnown}</label></div>
-  <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.correctGuesses[uiLang]}</label><label class="summary_stat"> ${correctGuesses}</label></div>
-  <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.totalFailed[uiLang]}</label><label class="summary_stat"> ${totalSessionNotPassed}</label></div>
-  <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.avgRecallTime[uiLang]}</label><label class="summary_stat"> ${avgSessionRecallSeconds}${FEEDBACK_MEESAGES.overlay.units[uiLang]}</label></div>
-  <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.longestStrike[uiLang]}</label><label class="summary_stat"> ${longestCorrectStreak}</label></div>
-  <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.uniqueWords[uiLang]}</label><label class="summary_stat"> ${uniqueWords}</label></div>
-  <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.improved[uiLang]}</label><label class="summary_stat"> ${improvedWords.length}</label></div>
-  <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.newWords[uiLang]}</label><label class="summary_stat">${newWords.length} </label></div>
-  <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.newLearned[uiLang]}</label><label class="summary_stat">${learnedNewWords.length} </label></div>
-  <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.strongest[uiLang]}</label><label class="summary_stat">${sortedWordsByScore.length > 0 ? strongestWord.question : ""} </label></div>
-  <div class ="summary_line"><label class="summary_label">${LEARNING_RULES.uiTexts.summaryLabels.weakest[uiLang]}</label><label class="summary_stat">${sortedWordsByScore.length > 0 ? weakestWord.question : ""} </label></div>
+    <h1 class="summary_header">${headerText}</h1>
+    ${rowsHtml}
   </div>
 `;
 }
+
+// function renderSummary() {
+//   const sessionTimeMs = performance.now() - sessionStartTime;
+//   const sessionTime = msToTime(sessionTimeMs);
+//   const enriched = getSessionSummaryFromStats();
+//   const uniqueWords = enriched.length;
+//   // const unkownWords = enriched.filter((word) => word.wordLevel === 1);
+//   const newWords = enriched.filter((word) => word.newWord);
+//   const learnedNewWords = enriched.filter((word) => word.learnedNew);
+//   const improvedWords = enriched.filter((word) => word.improved);
+
+//   const totalQuestions = sessionState.sessionStats.allSessionAnswers.length;
+
+//   // const lateCorrects = sessionState.sessionStats.allSessionAnswers.filter(
+//   //   (category) => category === ANSWER_KEYS.LATE_CORRECT,
+//   // );
+
+//   const correctGuesses = sessionState.sessionStats.allSessionAnswers.filter(
+//     (answer) => answer === ANSWERS_CATEGORIES.CORRECT_GUESS.label,
+//   ).length;
+
+//   const avgSessionRecallTime =
+//     sessionState.sessionStats.allSessionTimes.length > 0
+//       ? sessionState.sessionStats.allSessionTimes.reduce(
+//           (sum, recall) => sum + recall,
+//           0,
+//         ) / sessionState.sessionStats.allSessionTimes.length
+//       : 0;
+
+//   const avgSessionRecallSeconds = (avgSessionRecallTime / 1000)
+//     .toFixed(2)
+//     .replace(".", ":");
+
+//   const longestCorrectStreak = longestStreak(
+//     sessionState.sessionStats.allSessionAnswers,
+//     KNOW_CATEGORIES,
+//   );
+
+//   const totalSessionPassed = sessionState.sessionStats.allSessionAnswers.filter(
+//     (answer) => CORRECT_CATEGORIES.has(answer),
+//   ).length;
+
+//   const totalSessionKnown = sessionState.sessionStats.allSessionAnswers.filter(
+//     (answer) => KNOW_CATEGORIES.has(answer),
+//   ).length;
+
+//   const totalSessionNotPassed = totalQuestions - totalSessionPassed;
+
+//   const sortedWordsByScore = [...enriched].sort(
+//     (a, b) => b.finalScore - a.finalScore,
+//   );
+
+//   const strongestWord = sortedWordsByScore[0] ?? null;
+//   const weakestWord = sortedWordsByScore.at(-1) ?? null;
+
+//   summaryCon.innerHTML = `
+//   <div class="summary_con ${uiLang === "he" ? "rtl" : "ltr"}">
+//   <h1 class="summary_header">${uiTexts.summaryHeader[uiLang]}</h1>
+//    <div class ="summary_line"><label class="summary_label">${uiTexts.summaryLabels.sessionDuration[uiLang]}</label><label class="summary_stat"> ${sessionTime}</label></div>
+//   <div class ="summary_line"><label class="summary_label">${uiTexts.summaryLabels.totalQuestions[uiLang]}</label><label class="summary_stat"> ${totalQuestions}</label></div>
+//   <div class ="summary_line"><label class="summary_label">${uiTexts.summaryLabels.totalKnown[uiLang]}</label><label class="summary_stat"> ${totalSessionKnown}</label></div>
+//   <div class ="summary_line"><label class="summary_label">${uiTexts.summaryLabels.correctGuesses[uiLang]}</label><label class="summary_stat"> ${correctGuesses}</label></div>
+//   <div class ="summary_line"><label class="summary_label">${uiTexts.summaryLabels.totalFailed[uiLang]}</label><label class="summary_stat"> ${totalSessionNotPassed}</label></div>
+//   <div class ="summary_line"><label class="summary_label">${uiTexts.summaryLabels.avgRecallTime[uiLang]}</label><label class="summary_stat"> ${avgSessionRecallSeconds}${FEEDBACK_MEESAGES.overlay.units[uiLang]}</label></div>
+//   <div class ="summary_line"><label class="summary_label">${uiTexts.summaryLabels.longestStrike[uiLang]}</label><label class="summary_stat"> ${longestCorrectStreak}</label></div>
+//   <div class ="summary_line"><label class="summary_label">${uiTexts.summaryLabels.uniqueWords[uiLang]}</label><label class="summary_stat"> ${uniqueWords}</label></div>
+//   <div class ="summary_line"><label class="summary_label">${uiTexts.summaryLabels.improved[uiLang]}</label><label class="summary_stat"> ${improvedWords.length}</label></div>
+//   <div class ="summary_line"><label class="summary_label">${uiTexts.summaryLabels.newWords[uiLang]}</label><label class="summary_stat">${newWords.length} </label></div>
+//   <div class ="summary_line"><label class="summary_label">${uiTexts.summaryLabels.newLearned[uiLang]}</label><label class="summary_stat">${learnedNewWords.length} </label></div>
+//   <div class ="summary_line"><label class="summary_label">${uiTexts.summaryLabels.strongest[uiLang]}</label><label class="summary_stat">${sortedWordsByScore.length > 0 ? strongestWord.question : ""} </label></div>
+//   <div class ="summary_line"><label class="summary_label">${uiTexts.summaryLabels.weakest[uiLang]}</label><label class="summary_stat">${sortedWordsByScore.length > 0 ? weakestWord.question : ""} </label></div>
+//   </div>
+// `;
+// }
 
 function stopSession() {
   if (sessionClock) clearInterval(sessionClock);
@@ -780,8 +1009,7 @@ function renderQuestion(card) {
 }
 
 function updateWordStats(card) {
-  levelText.textContent =
-    LEARNING_RULES.uiTexts.wordStatus[card.wordLevel][uiLang];
+  levelText.textContent = uiTexts.wordStatus[card.wordLevel][uiLang];
   difArrow.style.left = `${getDiffArrowPosition(card)}%`;
   if (roundState.submitted) {
     starsFill.classList.add("animate-fill");
@@ -1082,7 +1310,10 @@ function checkLevelBoost(card) {
 function getAnswerResult(card, selected, mode) {
   const key = roundState.roundFlip ? "question" : "answer";
   const correctAns = selected.value === card[key];
-  const duration = Math.min(performance.now() - questionStartTime, 20000);
+  const duration = Math.min(
+    performance.now() - questionStartTime,
+    LEARNING_RULES.maximumRecallDeafult,
+  );
   // const asnwerTime = blindRound
   //   ? duration -
   //     (getCountdownDuration(card) -
@@ -1250,24 +1481,53 @@ function calcScore(answerCategory, card) {
   // card.recentScore = card.last5Scores.reduce((sum, val) => sum + val, 0);
 }
 
+// function updateFeedbackGrid(answerCategoryLabel) {
+//   // let classToAdd;
+//   // if (answerCategory === "correct") {
+//   //   classToAdd = "correct_answer";
+//   // } else if (answerCategory === "guess") {
+//   //   classToAdd = "guess_answer";
+//   // } else if (answerCategory === "late_correct") {
+//   //   classToAdd = "late_answer";
+//   // } else if (answerCategory === "wrong") {
+//   //   classToAdd = "wrong_answer";
+//   // }
+//   const cube = document.createElement("div");
+//   cube.classList.add("cube");
+//   cube.classList.add(answerCategoryLabel);
+//   feedGrid.append(cube);
+//   summaryGrid.append(cube);
+//   const allCubes = document.getElementsByClassName("cube");
+//   const numberOfCubes = allCubes.length;
+//   for (const cube of allCubes) {
+//     if (numberOfCubes <= 30) {
+//       cube.style.width = "15px";
+//       cube.style.height = "15px";
+//     } else if (numberOfCubes <= 60) {
+//       cube.style.width = "11px";
+//       cube.style.height = "11px";
+//     } else if (numberOfCubes <= 96) {
+//       cube.style.width = "6px";
+//       cube.style.height = "6px";
+//     } else {
+//       cube.style.width = "4px";
+//       cube.style.height = "4px";
+//     }
+//   }
+// }
+
 function updateFeedbackGrid(answerCategoryLabel) {
-  // let classToAdd;
-  // if (answerCategory === "correct") {
-  //   classToAdd = "correct_answer";
-  // } else if (answerCategory === "guess") {
-  //   classToAdd = "guess_answer";
-  // } else if (answerCategory === "late_correct") {
-  //   classToAdd = "late_answer";
-  // } else if (answerCategory === "wrong") {
-  //   classToAdd = "wrong_answer";
-  // }
-  const cube = document.createElement("div");
-  cube.classList.add("cube");
-  cube.classList.add(answerCategoryLabel);
-  feedGrid.append(cube);
-  summaryGrid.append(cube);
+  const cube1 = document.createElement("div");
+  cube1.classList.add("cube", answerCategoryLabel);
+  feedGrid.append(cube1);
+
+  const cube2 = document.createElement("div");
+  cube2.classList.add("cube", answerCategoryLabel);
+  summaryGrid.append(cube2);
+
   const allCubes = document.getElementsByClassName("cube");
   const numberOfCubes = allCubes.length;
+
   for (const cube of allCubes) {
     if (numberOfCubes <= 30) {
       cube.style.width = "15px";
@@ -1306,8 +1566,8 @@ function getSelectedAnswer() {
   return document.querySelector('input[name="answer"]:checked');
 }
 
-function getSelectedLanguage() {
-  return document.querySelector('input[name="language"]:checked');
+function getCourse() {
+  return document.querySelector('input[name="course"]:checked');
 }
 
 function showNoSelectionMessage() {
@@ -1476,12 +1736,13 @@ function onSubmit(e) {
 
 function onStart(e) {
   e.preventDefault();
-  const selected = getSelectedLanguage();
+  const selected = getCourse();
+  console.log(selected);
   if (!selected) {
     return;
   }
-  courseLang = selected;
-  console.log(courseLang.value);
+  course = selected.value;
+  loadProgress(course);
   navigate("app");
   startApp();
 }
@@ -1494,7 +1755,7 @@ function resetState() {
   overlay.classList.remove("show");
   overlayTimeout = null;
   overlayMinTimeDone = false;
-  isHolding = false;
+  // isHolding = false;
   pendingNext = null;
 
   bubble.classList.add("invisible");
@@ -1554,8 +1815,6 @@ function resetState() {
 }
 
 function startApp() {
-  // startBtn.style.display = "none";
-
   endSessionBtn.classList.add("inactive");
   sessionStarted = false;
 
@@ -1565,10 +1824,12 @@ function startApp() {
   sessionTimer.textContent = "00:00";
   sessionState = resetSessionStats();
   currentSessionArr = [];
+  recentWordIds = new Set();
+
   // currentSessionStats = new Map();
 
   feedGrid.textContent = "";
-  // loadProgress();
+  summaryGrid.textContent = ""; // loadProgress();
   resetState();
   renderStats();
   startSessionTimer();
@@ -1602,16 +1863,17 @@ list.addEventListener("change", (e) => {
   }
 });
 
-languageSelection.addEventListener("change", (e) => {
-  if (e.target.name === "language") {
+courseSelection.addEventListener("change", (e) => {
+  if (e.target.name === "course") {
     homeStartBtn.classList.add("enable_start");
+    console.log("button enabled");
   }
 });
 
 langugaeBtn.addEventListener("click", () => {
-  uiLang === "en" ? (uiLang = "he") : (uiLang = "en");
-  setUiText(uiLang);
-  saveProgress();
+  uiLang = uiLang === "en" ? "he" : "en";
+  setUiText(uiLang, uiElements);
+  saveUiLang();
 });
 
 resetbtn.addEventListener("click", () => {
@@ -1624,7 +1886,6 @@ submitButtons.forEach((button) => {
 });
 
 removeWordBtn.addEventListener("click", removeWord);
-// startBtn.addEventListener("click", startApp);
 
 homeStartBtn.addEventListener("click", onStart);
 
@@ -1677,34 +1938,34 @@ navigate("home");
 
 // api sentences
 
-mainCrow.addEventListener("click", async () => {
-  const data = await getExampleSentence(chosenCard.question, chosenCard.answer);
-  console.log(data);
-  showMsg(data.sentence);
-});
+// mainCrow.addEventListener("click", async () => {
+//   const data = await getExampleSentence(chosenCard.question, chosenCard.answer);
+//   console.log(data);
+//   showMsg(data.sentence);
+// });
 
-async function getExampleSentence(word, meaning = "", partOfSpeech = "") {
-  const res = await fetch("http://localhost:3001/example-sentence", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      word,
-      meaning,
-      partOfSpeech,
-      level: "A2",
-      nativeLanguage: "Hebrew",
-    }),
-  });
+// async function getExampleSentence(word, meaning = "", partOfSpeech = "") {
+//   const res = await fetch("http://localhost:3001/example-sentence", {
+//     method: "POST",
+//     headers: {
+//       "Content-Type": "application/json",
+//     },
+//     body: JSON.stringify({
+//       word,
+//       meaning,
+//       partOfSpeech,
+//       level: "A2",
+//       nativeLanguage: uiLang,
+//     }),
+//   });
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => null);
-    throw new Error(errorData?.message || errorData?.error || "Request failed");
-  }
+//   if (!res.ok) {
+//     const errorData = await res.json().catch(() => null);
+//     throw new Error(errorData?.message || errorData?.error || "Request failed");
+//   }
 
-  return res.json();
-}
+//   return res.json();
+// }
 // const data = await getExampleSentence("old", "ישן", "שם תואר");
 
-// console.log(data);
+console.log("codeEnd");
