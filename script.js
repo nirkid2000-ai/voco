@@ -51,15 +51,27 @@ const tagline = document.querySelector(".tagline");
 const homeScreen = document.getElementById("home-screen");
 const appScreen = document.getElementById("app-screen");
 const summaryScreen = document.getElementById("summary-screen");
+const btns = document.querySelector(".btns");
 
 const courseSelection = document.querySelector(".course_selection");
 const englishCourseBtn = document.querySelector(".english_course");
+const hebrewCourseBtn = document.querySelector(".hebrew_course");
 const spanishCourseBtn = document.querySelector(".spanish_course");
 const latvianCourseBtn = document.querySelector(".latvian_course");
 
 const homeStartBtn = document.getElementById("home-start-btn");
 const studyMoreBtn = document.getElementById("study-more-btn");
-const langugaeBtn = document.querySelector(".language_ui_btn");
+// const languageBtn = document.querySelector(".language_ui_btn");
+
+const nativeLanguageBtns = document.querySelectorAll(
+  'input[name="native_lang"]',
+);
+const hebrewUiLangBtn = document.querySelector(
+  'input[name="native_lang"][value="he"]',
+);
+const englishUiLangBtn = document.querySelector(
+  'input[name="native_lang"][value="en"]',
+);
 
 const backHomeBtn = document.getElementById("back_home_btn");
 const endSessionBtn = document.getElementById("end_session_btn");
@@ -75,6 +87,7 @@ const list = document.querySelector(".wordlist");
 const submitMainBtn = document.querySelector(".main_ans");
 const submitKnowBtn = document.querySelector(".know_ans");
 const submitGuessBtn = document.querySelector(".guess_ans");
+const closeWordBtn = document.querySelector(".close_word");
 
 const timerLabel = document.querySelector(".timer_label");
 const resetbtn = document.querySelector(".reset");
@@ -92,7 +105,19 @@ const starsFill = document.querySelector(".stars-fill");
 const countdown = document.querySelector(".countdown");
 const countdownCon = document.querySelector(".countdown_con");
 const submitButtons = document.querySelectorAll(".submit");
-const removeWordBtn = document.querySelector(".word_remove");
+
+const removeWordBtn = document.querySelector(".word_remove_btn");
+const removeScreen = document.querySelector(".remove_screen");
+const removeQuestionText = document.querySelector(".remove_question");
+const removeConfrimBtn = document.querySelector(".yes_remove");
+const removeCancelBtn = document.querySelector(".no_remove");
+const wordRemovedText = document.querySelector(".word_removed_text");
+
+const resetProgressScreen = document.querySelector(".reset_progress_screen");
+const resetQuestionText = document.querySelector(".reset_progress_question");
+const resetConfrimBtn = document.querySelector(".yes_reset");
+const resetCancelBtn = document.querySelector(".no_reset");
+
 const blindRecallLogo = document.querySelector(".blind_recall");
 const blindCounter = document.querySelector(".blind_counter");
 const flipLogo = document.querySelector(".flip_logo");
@@ -100,14 +125,36 @@ const feedGrid = document.querySelector(".fb_grid");
 const summaryGrid = document.querySelector(".summary_grid");
 // const startBtn = document.querySelector(".start");
 const overlay = document.querySelector(".meaning_overlay");
+const expandedWord = document.querySelector(".word_expaneded");
+const pressInfo = document.querySelector(".press_expand");
+const cardStats = document.querySelector(".card_stats");
+const wordNoteArea = document.getElementById("note_text");
+const sentenceText = document.getElementById("sentence");
+const translationText = document.getElementById("translation");
+const sentenceTextArea = document.querySelector(".sentence_text");
 const pin = document.querySelector(".pin");
 const overlayWord = document.querySelector(".meaning_word");
 const overlayText = document.querySelector(".meaning_text");
-const overlayExample = document.querySelector(".meaning_example");
+// const overlayExample = document.querySelector(".meaning_example");
 const overlayTime = document.querySelector(".time_to_answer");
 const overlayAvg = document.querySelector(".avg_answer");
 const overlayCooldown = document.querySelector(".next_cooldown");
 const lastAnswers = document.querySelector(".last_answers");
+const addNoteBtn = document.querySelector(".add_note");
+const showSentenceBtn = document.querySelector(".show_sentence");
+
+const mainWordBtns = document.querySelector(".main_word_btns");
+const openNoteBtns = document.querySelector(".open_note_btns");
+const saveNoteBtn = document.querySelector(".save_note");
+const closeNoteBtn = document.querySelector(".close_note");
+const giveTipBtn = document.querySelector(".give_tip");
+
+const openSentenceBtns = document.querySelector(".open_sentence_btns");
+const giveSentenceBtn = document.querySelector(".give_sentence");
+const saveSentenceBtn = document.querySelector(".save_sentence");
+const closeSentenceBtn = document.querySelector(".close_sentence");
+const sentenceLoader = document.getElementById("loading_dots");
+
 const bubble = document.querySelector(".bubble_wrap");
 
 const mainCrow = document.getElementById("main_crow");
@@ -126,7 +173,10 @@ const uiElements = {
   menuBtns,
   wordTop,
   tagline,
+  hebrewUiLangBtn,
+  englishUiLangBtn,
   englishCourseBtn,
+  hebrewCourseBtn,
   spanishCourseBtn,
   latvianCourseBtn,
   homeStartBtn,
@@ -140,6 +190,27 @@ const uiElements = {
   resetbtn,
   timerLabel,
   studyMoreBtn,
+  expandedWord,
+  removeWordBtn,
+  closeWordBtn,
+  saveNoteBtn,
+  closeNoteBtn,
+  showSentenceBtn,
+  giveSentenceBtn,
+  saveSentenceBtn,
+  closeSentenceBtn,
+  giveTipBtn,
+  pressInfo,
+  sentenceText,
+  translationText,
+  removeScreen,
+  removeQuestionText,
+  removeConfrimBtn,
+  removeCancelBtn,
+  wordRemovedText,
+  resetQuestionText,
+  resetConfrimBtn,
+  resetCancelBtn,
 };
 
 circle.style.strokeDasharray = `${circumference}`;
@@ -258,6 +329,8 @@ function saveProgress() {
         inCycle: card.inCycle,
         cooldownUntil: card.cooldownUntil,
         isRemoved: card.isRemoved,
+        note: card.note,
+        sentence: card.sentence,
       },
     ]),
   );
@@ -288,6 +361,7 @@ function loadProgress(selectedCourse) {
   try {
     course = selectedCourse;
     cards = createInitialCards(course, uiLang);
+    console.log("loaded");
 
     const allProgress = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
 
@@ -349,25 +423,29 @@ function loadProgress(selectedCourse) {
 //   if (sessionClock) clearInterval(sessionClock);
 // }
 
-function resetProgress() {
-  if (!course) return;
+// function resetProgress() {
+//   finishOverlay();
+//   if (!course) return;
+//   document.querySelectorAll('input[name="course"]').forEach((radio) => {
+//     radio.checked = false;
+//   });
 
-  const allProgress = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+//   const allProgress = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
 
-  delete allProgress[course];
+//   delete allProgress[course];
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(allProgress));
+//   localStorage.setItem(STORAGE_KEY, JSON.stringify(allProgress));
 
-  cards = createInitialCards(course, uiLang);
-  buildCardsLookup();
+//   cards = createInitialCards(course, uiLang);
+//   buildCardsLookup();
 
-  globalScore = 0;
-  globalStreak = 0;
-  correctGuesses = 0;
-  totalGuesses = 0;
-  totalCorrect = 0;
-  totalQs = 0;
-}
+//   globalScore = 0;
+//   globalStreak = 0;
+//   correctGuesses = 0;
+//   totalGuesses = 0;
+//   totalCorrect = 0;
+//   totalQs = 0;
+// }
 
 let cards;
 let cardsById = new Map();
@@ -407,6 +485,7 @@ let totalQs = 0;
 let currentSessionArr = [];
 
 let questionStartTime;
+// addNoteBtn;
 let sessionStartTime;
 let countdownInterval;
 let blindRevealTimeout;
@@ -417,8 +496,8 @@ let sessionClock;
 let overlayTimeout = null;
 let correctFeedbackTimeout = null;
 // let isHolding = false;
-let pendingNext = null;
-let overlayMinTimeDone = false;
+// let pendingNext = null;
+// let overlayMinTimeDone = false;
 
 let uiLang = "he";
 let course;
@@ -430,8 +509,10 @@ let sessionStarted;
 // setUiText(uiLang);
 
 // let currentSessionStats = new Map();
+console.log(uiLang);
 
 loadUiLang();
+console.log(uiLang);
 setUiText(uiLang, uiElements);
 
 function saveUiLang() {
@@ -723,80 +804,6 @@ function renderSummary() {
 `;
 }
 
-// function renderSummary() {
-//   const sessionTimeMs = performance.now() - sessionStartTime;
-//   const sessionTime = msToTime(sessionTimeMs);
-//   const enriched = getSessionSummaryFromStats();
-//   const uniqueWords = enriched.length;
-//   // const unkownWords = enriched.filter((word) => word.wordLevel === 1);
-//   const newWords = enriched.filter((word) => word.newWord);
-//   const learnedNewWords = enriched.filter((word) => word.learnedNew);
-//   const improvedWords = enriched.filter((word) => word.improved);
-
-//   const totalQuestions = sessionState.sessionStats.allSessionAnswers.length;
-
-//   // const lateCorrects = sessionState.sessionStats.allSessionAnswers.filter(
-//   //   (category) => category === ANSWER_KEYS.LATE_CORRECT,
-//   // );
-
-//   const correctGuesses = sessionState.sessionStats.allSessionAnswers.filter(
-//     (answer) => answer === ANSWERS_CATEGORIES.CORRECT_GUESS.label,
-//   ).length;
-
-//   const avgSessionRecallTime =
-//     sessionState.sessionStats.allSessionTimes.length > 0
-//       ? sessionState.sessionStats.allSessionTimes.reduce(
-//           (sum, recall) => sum + recall,
-//           0,
-//         ) / sessionState.sessionStats.allSessionTimes.length
-//       : 0;
-
-//   const avgSessionRecallSeconds = (avgSessionRecallTime / 1000)
-//     .toFixed(2)
-//     .replace(".", ":");
-
-//   const longestCorrectStreak = longestStreak(
-//     sessionState.sessionStats.allSessionAnswers,
-//     KNOW_CATEGORIES,
-//   );
-
-//   const totalSessionPassed = sessionState.sessionStats.allSessionAnswers.filter(
-//     (answer) => CORRECT_CATEGORIES.has(answer),
-//   ).length;
-
-//   const totalSessionKnown = sessionState.sessionStats.allSessionAnswers.filter(
-//     (answer) => KNOW_CATEGORIES.has(answer),
-//   ).length;
-
-//   const totalSessionNotPassed = totalQuestions - totalSessionPassed;
-
-//   const sortedWordsByScore = [...enriched].sort(
-//     (a, b) => b.finalScore - a.finalScore,
-//   );
-
-//   const strongestWord = sortedWordsByScore[0] ?? null;
-//   const weakestWord = sortedWordsByScore.at(-1) ?? null;
-
-//   summaryCon.innerHTML = `
-//   <div class="summary_con ${uiLang === "he" ? "rtl" : "ltr"}">
-//   <h1 class="summary_header">${uiTexts.summaryHeader[uiLang]}</h1>
-//    <div class ="summary_line"><label class="summary_label">${uiTexts.summaryLabels.sessionDuration[uiLang]}</label><label class="summary_stat"> ${sessionTime}</label></div>
-//   <div class ="summary_line"><label class="summary_label">${uiTexts.summaryLabels.totalQuestions[uiLang]}</label><label class="summary_stat"> ${totalQuestions}</label></div>
-//   <div class ="summary_line"><label class="summary_label">${uiTexts.summaryLabels.totalKnown[uiLang]}</label><label class="summary_stat"> ${totalSessionKnown}</label></div>
-//   <div class ="summary_line"><label class="summary_label">${uiTexts.summaryLabels.correctGuesses[uiLang]}</label><label class="summary_stat"> ${correctGuesses}</label></div>
-//   <div class ="summary_line"><label class="summary_label">${uiTexts.summaryLabels.totalFailed[uiLang]}</label><label class="summary_stat"> ${totalSessionNotPassed}</label></div>
-//   <div class ="summary_line"><label class="summary_label">${uiTexts.summaryLabels.avgRecallTime[uiLang]}</label><label class="summary_stat"> ${avgSessionRecallSeconds}${FEEDBACK_MEESAGES.overlay.units[uiLang]}</label></div>
-//   <div class ="summary_line"><label class="summary_label">${uiTexts.summaryLabels.longestStrike[uiLang]}</label><label class="summary_stat"> ${longestCorrectStreak}</label></div>
-//   <div class ="summary_line"><label class="summary_label">${uiTexts.summaryLabels.uniqueWords[uiLang]}</label><label class="summary_stat"> ${uniqueWords}</label></div>
-//   <div class ="summary_line"><label class="summary_label">${uiTexts.summaryLabels.improved[uiLang]}</label><label class="summary_stat"> ${improvedWords.length}</label></div>
-//   <div class ="summary_line"><label class="summary_label">${uiTexts.summaryLabels.newWords[uiLang]}</label><label class="summary_stat">${newWords.length} </label></div>
-//   <div class ="summary_line"><label class="summary_label">${uiTexts.summaryLabels.newLearned[uiLang]}</label><label class="summary_stat">${learnedNewWords.length} </label></div>
-//   <div class ="summary_line"><label class="summary_label">${uiTexts.summaryLabels.strongest[uiLang]}</label><label class="summary_stat">${sortedWordsByScore.length > 0 ? strongestWord.question : ""} </label></div>
-//   <div class ="summary_line"><label class="summary_label">${uiTexts.summaryLabels.weakest[uiLang]}</label><label class="summary_stat">${sortedWordsByScore.length > 0 ? weakestWord.question : ""} </label></div>
-//   </div>
-// `;
-// }
-
 function stopSession() {
   if (sessionClock) clearInterval(sessionClock);
   if (questionClock) clearInterval(questionClock);
@@ -807,17 +814,68 @@ function stopSession() {
 
 let isPinned = false;
 
-function togglePin() {
-  isPinned = !isPinned;
-  if (isPinned) {
-    console.log("pinned");
-    pin.style.display = "flex";
-  }
-
-  if (!isPinned && overlayMinTimeDone) {
-    finishOverlay();
+function updateOpenNoteBtn() {
+  if (chosenCard.note) {
+    console.log(chosenCard.note);
+    console.log("note found");
+    addNoteBtn.textContent = uiTexts.buttons.note.openNote[uiLang];
+  } else {
+    console.log("no note found");
+    addNoteBtn.textContent = uiTexts.buttons.note.addNote[uiLang];
   }
 }
+
+function updateGiveSentenceBtn() {
+  if (chosenCard.sentenceData?.sentence) {
+    console.log(chosenCard ?? sentenceData.sentence);
+    console.log("sentence found");
+    showSentenceBtn.textContent = uiTexts.buttons.note.showSentence[uiLang];
+  } else {
+    console.log("no sentence found");
+    showSentenceBtn.textContent = uiTexts.buttons.note.giveSentence[uiLang];
+  }
+}
+
+function expandWord() {
+  if (!isPinned) {
+    console.log("expanded");
+    console.log(pressInfo);
+    pressInfo.classList.add("hidden");
+    pin.style.display = "flex";
+    expandedWord.classList.remove("hidden");
+    knowOrGuess.classList.add("hidden");
+    submitMainBtn.classList.add("hidden");
+    closeWordBtn.classList.remove("hidden");
+    btns.classList.remove("inactive");
+    updateOpenNoteBtn();
+    updateGiveSentenceBtn();
+  }
+
+  isPinned = true;
+}
+
+function closeWord() {
+  finishOverlay();
+}
+
+closeWordBtn.addEventListener("click", closeWord);
+
+// function togglePin() {
+//   isPinned = !isPinned;
+//   if (isPinned) {
+//     console.log("pinned");
+//     pin.style.display = "flex";
+//     expandedWord.classList.remove("hidden");
+//     knowOrGuess.classList.add("hidden");
+//     submitMainBtn.classList.add("hidden");
+//     closeWord.classList.remove("hidden");
+//     btns.classList.remove("inactive");
+//   }
+
+//   if (!isPinned && overlayMinTimeDone) {
+//     finishOverlay();
+//   }
+// }
 
 // function holdStart() {
 //   isHolding = true;
@@ -828,13 +886,15 @@ function togglePin() {
 //   isHolding = false;}
 
 // Hover/touch can extend visibility, but never shorten it.
-if (overlayMinTimeDone) {
-  finishOverlay();
-}
+// if (overlayMinTimeDone) {
+//   finishOverlay();
+// }
 
-function enableOverlayInteractions() {
-  overlay.addEventListener("click", togglePin);
-}
+overlay.addEventListener("click", expandWord);
+
+// function enableOverlayInteractions() {
+//   overlay.addEventListener("click", togglePin);
+// }
 
 // function enableOverlayInteractions() {
 //   if (INPUT_TYPE === "touch") {
@@ -849,12 +909,16 @@ function enableOverlayInteractions() {
 // }
 
 function showMeaning(card, category, speedAvg, onDone) {
-  pendingNext = onDone;
-  overlayMinTimeDone = false;
+  btns.classList.add("inactive");
+  // pendingNext = onDone;
+  // overlayMinTimeDone = false;
+  const questionKey = roundState.roundFlip ? "answer" : "question";
   const answerKey = roundState.roundFlip ? "question" : "answer";
+  console.log(answerKey);
+  console.log(card);
 
   showAnswersCircles(card);
-  overlayWord.textContent = card.question;
+  overlayWord.textContent = card[questionKey];
   overlayText.textContent = card[answerKey];
 
   const lastRecall = card.recalls.at(-1);
@@ -867,24 +931,21 @@ function showMeaning(card, category, speedAvg, onDone) {
     " " +
     FEEDBACK_MEESAGES.overlay.units[uiLang];
   overlayAvg.textContent =
-    FEEDBACK_MEESAGES.overlay.avgTime[uiLang] +
-    msToSeconds(avgMs) +
-    " " +
-    FEEDBACK_MEESAGES.overlay.units[uiLang];
+    FEEDBACK_MEESAGES.overlay.avgTime[uiLang] + msToSeconds(avgMs);
   overlayCooldown.textContent =
     FEEDBACK_MEESAGES.overlay.cooldownTime[uiLang] + msToTime(card.coolDown);
 
-  overlayExample.textContent = LEARNING_RULES.stageSettings[card.wordLevel]
-    .example
-    ? card.example || "..."
-    : "";
+  // overlayExample.textContent = LEARNING_RULES.stageSettings[card.wordLevel]
+  //   .example
+  //   ? card.example || "..."
+  //   : "";
 
   overlay.classList.add("show");
   qText.classList.add("on_top");
 
   clearTimeout(overlayTimeout);
   overlayTimeout = setTimeout(() => {
-    overlayMinTimeDone = true;
+    // overlayMinTimeDone = true;
 
     if (!isPinned) {
       finishOverlay();
@@ -893,20 +954,25 @@ function showMeaning(card, category, speedAvg, onDone) {
 }
 
 function finishOverlay() {
-  qText.classList.remove("on_top");
+  // qText.classList.remove("on_top");
   pin.style.display = "none";
+  expandedWord.classList.add("hidden");
+  closeWordBtn.classList.add("hidden");
+  wordNoteArea.classList.add("hidden");
+  cardStats.classList.remove("hidden");
+
   clearTimeout(overlayTimeout);
   overlayTimeout = null;
-  overlayMinTimeDone = false;
+  // overlayMinTimeDone = false;
   isPinned = false;
 
   overlay.classList.remove("show");
 
-  if (pendingNext) pendingNext();
-  pendingNext = null;
+  finalizeCorrectFeedbackUI();
+  resetState();
 }
 
-enableOverlayInteractions();
+// enableOverlayInteractions();
 
 // function getPromotionThreshold() {
 //   return LEARNING_RULES.promotion.requiredLevelStreak;
@@ -1006,6 +1072,7 @@ function renderQuestion(card) {
   if (!card) return;
   renderQuestionText(card);
   updateWordStats(card);
+  btns.classList.remove("inactive");
 }
 
 function updateWordStats(card) {
@@ -1166,10 +1233,11 @@ function runCorrectAnswerFlow(card, category, speedAvg) {
   renderStats();
   stopQuestionTimers();
 
-  showMeaning(card, category, speedAvg, () => {
-    finalizeCorrectFeedbackUI();
-    resetState();
-  });
+  showMeaning(card, category, speedAvg);
+  // showMeaning(card, category, speedAvg, () => {
+  //   finalizeCorrectFeedbackUI();
+  //   resetState();
+  // });
 }
 
 function handleFirstTryCorrect(card, category) {
@@ -1400,9 +1468,15 @@ function getMessage(category, currentTries) {
   return typeof message === "function" ? message(currentTries) : message;
 }
 
-function showMsg(text) {
+function showMsg(text, duration) {
   bubble.classList.remove("invisible");
   feedback.textContent = text;
+  if (duration) {
+    setTimeout(() => {
+      bubble.classList.add("invisible");
+      feedback.textContent = "";
+    }, duration);
+  }
 }
 
 function scheduleCorrectFeedbackReset(category) {
@@ -1481,41 +1555,6 @@ function calcScore(answerCategory, card) {
   // card.recentScore = card.last5Scores.reduce((sum, val) => sum + val, 0);
 }
 
-// function updateFeedbackGrid(answerCategoryLabel) {
-//   // let classToAdd;
-//   // if (answerCategory === "correct") {
-//   //   classToAdd = "correct_answer";
-//   // } else if (answerCategory === "guess") {
-//   //   classToAdd = "guess_answer";
-//   // } else if (answerCategory === "late_correct") {
-//   //   classToAdd = "late_answer";
-//   // } else if (answerCategory === "wrong") {
-//   //   classToAdd = "wrong_answer";
-//   // }
-//   const cube = document.createElement("div");
-//   cube.classList.add("cube");
-//   cube.classList.add(answerCategoryLabel);
-//   feedGrid.append(cube);
-//   summaryGrid.append(cube);
-//   const allCubes = document.getElementsByClassName("cube");
-//   const numberOfCubes = allCubes.length;
-//   for (const cube of allCubes) {
-//     if (numberOfCubes <= 30) {
-//       cube.style.width = "15px";
-//       cube.style.height = "15px";
-//     } else if (numberOfCubes <= 60) {
-//       cube.style.width = "11px";
-//       cube.style.height = "11px";
-//     } else if (numberOfCubes <= 96) {
-//       cube.style.width = "6px";
-//       cube.style.height = "6px";
-//     } else {
-//       cube.style.width = "4px";
-//       cube.style.height = "4px";
-//     }
-//   }
-// }
-
 function updateFeedbackGrid(answerCategoryLabel) {
   const cube1 = document.createElement("div");
   cube1.classList.add("cube", answerCategoryLabel);
@@ -1570,13 +1609,17 @@ function getCourse() {
   return document.querySelector('input[name="course"]:checked');
 }
 
+function getNativeLanguage() {
+  return document.querySelector('input[name="native_lang"]:checked');
+}
+
 function showNoSelectionMessage() {
   roundState.btnDisabled = false;
-  showMsg(FEEDBACK_MEESAGES.noAnswer[uiLang]);
-  setTimeout(() => {
-    bubble.classList.add("invisible");
-    feedback.textContent = "";
-  }, 800);
+  showMsg(FEEDBACK_MEESAGES.noAnswer[uiLang], 800);
+  // setTimeout(() => {
+  //   bubble.classList.add("invisible");
+  //   feedback.textContent = "";
+  // }, 800);
 }
 
 function updateCountdownProgress(card, duration) {
@@ -1751,12 +1794,25 @@ function resetState() {
   if (correctFeedbackTimeout) clearTimeout(correctFeedbackTimeout);
   if (overlayTimeout) clearTimeout(overlayTimeout);
   countdown.style.width = `100%`;
-
+  isPinned = false;
   overlay.classList.remove("show");
   overlayTimeout = null;
-  overlayMinTimeDone = false;
+  // overlayMinTimeDone = false;
   // isHolding = false;
-  pendingNext = null;
+  // pendingNext = null;
+
+  expandedWord.classList.add("hidden");
+  openNoteBtns.classList.add("hidden");
+  mainWordBtns.classList.remove("hidden");
+  pressInfo.classList.remove("hidden");
+  closeWordBtn.classList.add("hidden");
+  closeWordBtn.classList.add("hidden");
+  wordNoteArea.value = "";
+  wordNoteArea.classList.add("hidden");
+  sentenceTextArea.classList.add("hidden");
+  openSentenceBtns.classList.add("hidden");
+  removeScreen.classList.add("hidden");
+  wordRemovedText.classList.add("hidden");
 
   bubble.classList.add("invisible");
   feedbackBg.classList.remove("correct_bg", "late_bg", "wrong_bg");
@@ -1844,14 +1900,6 @@ function updateUI() {
   submitMainBtn.classList.add("inactive");
 }
 
-function removeWord() {
-  chosenCard.isRemoved = true;
-  chosenCard.inCycle = false;
-  // saveProgress();
-  feedback.textContent = "המילה הוסרה מהמאגר";
-  setTimeout(resetState, 2000);
-}
-
 list.addEventListener("change", (e) => {
   if (e.target.name === "answer") {
     if (roundState.firstTry) {
@@ -1870,22 +1918,167 @@ courseSelection.addEventListener("change", (e) => {
   }
 });
 
-langugaeBtn.addEventListener("click", () => {
-  uiLang = uiLang === "en" ? "he" : "en";
+// languageBtn.addEventListener("click", () => {
+//   uiLang = uiLang === "en" ? "he" : "en";
+//   setUiText(uiLang, uiElements);
+//   saveUiLang();
+// });
+
+function onLangugeSwitch() {
+  console.log("language switch");
+  uiLang = getNativeLanguage().value;
+  console.log(uiLang);
   setUiText(uiLang, uiElements);
   saveUiLang();
+}
+
+// nativeLanguageBtn.addEventListener(){"click"
+
+// }
+
+nativeLanguageBtns.forEach((button) => {
+  button.addEventListener("click", onLangugeSwitch);
 });
 
-resetbtn.addEventListener("click", () => {
-  resetProgress();
-  navigate("home");
-});
+function addNote() {
+  // e.stopPropagation();
+  console.log("clicked");
+  console.log(cardStats);
+  cardStats.classList.add("hidden");
+  wordNoteArea.classList.remove("hidden");
+  saveNoteBtn.classList.remove("hidden");
+  openNoteBtns.classList.remove("hidden");
+  mainWordBtns.classList.add("hidden");
+  if (chosenCard.note) {
+    wordNoteArea.value = chosenCard.note;
+  }
+  wordNoteArea.placeholder = uiTexts.tipHolder[uiLang];
+}
+
+function closeNote() {
+  // e.stopPropagation();
+  cardStats.classList.remove("hidden");
+  mainWordBtns.classList.remove("hidden");
+  wordNoteArea.classList.add("hidden");
+  // saveNoteBtn.classList.add("hidden");
+  openNoteBtns.classList.add("hidden");
+  openSentenceBtns.classList.add("hidden");
+  sentenceTextArea.classList.add("hidden");
+  sentenceText.value = null;
+  translationText.value = null;
+}
+
+function saveNote() {
+  console.log("Note Saved");
+  chosenCard.note = wordNoteArea.value;
+  console.log(chosenCard);
+  console.log(wordNoteArea.value);
+  showMsg(FEEDBACK_MEESAGES.note.noteSaved[uiLang], 800);
+  updateOpenNoteBtn();
+  saveProgress();
+}
+
+function saveSentence() {
+  console.log("Sentecne saved");
+  chosenCard.sentenceData = {
+    sentence: sentenceText.value,
+    translation: translationText.value,
+  };
+  console.log(chosenCard);
+  console.log(wordNoteArea.value);
+  showMsg(FEEDBACK_MEESAGES.note.sentenceSaved[uiLang], 800);
+  updateGiveSentenceBtn();
+  saveProgress();
+}
+
+function openSentence() {
+  console.log("Opening Sentence");
+  wordNoteArea.value = chosenCard.sentence;
+  showMsg(FEEDBACK_MEESAGES.note.sentenceSaved[uiLang], 800);
+  updateOpenNoteBtn();
+  saveProgress();
+}
+
+addNoteBtn.addEventListener("click", addNote);
+saveNoteBtn.addEventListener("click", saveNote);
+closeNoteBtn.addEventListener("click", closeNote);
+
+saveSentenceBtn.addEventListener("click", saveSentence);
+closeSentenceBtn.addEventListener("click", closeNote);
+
+// wordNoteArea.addEventListener("click", (e) => e.stopPropagation());
+
+// resetbtn.addEventListener("click", () => {
+//   resetProgress();
+//   navigate("home");
+// });
 
 submitButtons.forEach((button) => {
   button.addEventListener("click", onSubmit);
 });
 
-removeWordBtn.addEventListener("click", removeWord);
+function removeWord() {
+  chosenCard.isRemoved = true;
+  chosenCard.inCycle = false;
+  showMsg("המילה הוסרה", 2000);
+  removeScreen.classList.add("hidden");
+  expandedWord.classList.add("hidden");
+  wordRemovedText.classList.remove("hidden");
+  saveProgress();
+
+  // setTimeout(resetState, 2000);
+}
+function removeWordScreen() {
+  removeScreen.classList.remove("hidden");
+}
+
+function cancelRemove() {
+  removeScreen.classList.add("hidden");
+}
+
+removeWordBtn.addEventListener("click", removeWordScreen);
+removeConfrimBtn.addEventListener("click", removeWord);
+removeCancelBtn.addEventListener("click", cancelRemove);
+
+function resetProgress() {
+  finishOverlay();
+  if (!course) return;
+  document.querySelectorAll('input[name="course"]').forEach((radio) => {
+    radio.checked = false;
+  });
+
+  const allProgress = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+
+  delete allProgress[course];
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(allProgress));
+
+  cards = createInitialCards(course, uiLang);
+  buildCardsLookup();
+
+  globalScore = 0;
+  globalStreak = 0;
+  correctGuesses = 0;
+  totalGuesses = 0;
+  totalCorrect = 0;
+  totalQs = 0;
+  resetProgressScreen.classList.add("hidden");
+  expandedWord.classList.add("hidden");
+  navigate("home");
+  // setTimeout(resetState, 2000);
+}
+
+function resetScreen() {
+  resetProgressScreen.classList.remove("hidden");
+}
+
+function cancelReset() {
+  resetProgressScreen.classList.add("hidden");
+}
+
+resetbtn.addEventListener("click", resetScreen);
+resetConfrimBtn.addEventListener("click", resetProgress);
+resetCancelBtn.addEventListener("click", cancelReset);
 
 homeStartBtn.addEventListener("click", onStart);
 
@@ -1936,36 +2129,111 @@ startAnimations();
 
 navigate("home");
 
-// api sentences
+giveTipBtn.addEventListener("click", async () => {
+  sentenceTextArea.classList.add("hidden");
+  showMsg(FEEDBACK_MEESAGES.note.tipThinking[uiLang], 2500);
+  const data = await giveTip(
+    chosenCard.question,
+    chosenCard.answer,
+    course,
+    uiLang,
+  );
+  console.log(data);
+  wordNoteArea.value = data.tip;
+});
 
-// mainCrow.addEventListener("click", async () => {
-//   const data = await getExampleSentence(chosenCard.question, chosenCard.answer);
-//   console.log(data);
-//   showMsg(data.sentence);
-// });
+async function generateSentence() {
+  sentenceLoader.classList.remove("hidden");
+  sentenceText.value = "";
+  translationText.value = "";
+  showMsg(FEEDBACK_MEESAGES.note.sentenceThinking[uiLang]);
+  try {
+    const data = await giveSentence(
+      chosenCard.question,
+      chosenCard.answer,
+      course,
+      uiLang,
+    );
+    console.log(data);
+    sentenceText.value = data.sentence;
+    translationText.value = data.translation;
+  } catch (err) {
+    console.log(err);
+  } finally {
+    console.log("loaded");
+    sentenceLoader.classList.add("hidden");
+    bubble.classList.add("invisible");
+    feedback.textContent = "";
+  }
+}
 
-// async function getExampleSentence(word, meaning = "", partOfSpeech = "") {
-//   const res = await fetch("http://localhost:3001/example-sentence", {
-//     method: "POST",
-//     headers: {
-//       "Content-Type": "application/json",
-//     },
-//     body: JSON.stringify({
-//       word,
-//       meaning,
-//       partOfSpeech,
-//       level: "A2",
-//       nativeLanguage: uiLang,
-//     }),
-//   });
+giveSentenceBtn.addEventListener("click", generateSentence);
 
-//   if (!res.ok) {
-//     const errorData = await res.json().catch(() => null);
-//     throw new Error(errorData?.message || errorData?.error || "Request failed");
-//   }
+showSentenceBtn.addEventListener("click", () => {
+  mainWordBtns.classList.add("hidden");
+  cardStats.classList.add("hidden");
+  wordNoteArea.classList.add("hidden");
+  sentenceTextArea.classList.remove("hidden");
+  saveSentenceBtn.classList.remove("hidden");
+  openSentenceBtns.classList.remove("hidden");
+  updateGiveSentenceBtn();
+  if (chosenCard.sentenceData?.sentence) {
+    console.log("theres a sentence already");
+    sentenceText.value = chosenCard.sentenceData.sentence;
+    translationText.value = chosenCard.sentenceData.translation;
+  } else {
+    generateSentence();
+  }
+});
 
-//   return res.json();
-// }
-// const data = await getExampleSentence("old", "ישן", "שם תואר");
+async function giveSentence(word, meaning = "", language, partOfSpeech = "") {
+  const res = await fetch("/api/example-sentence", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      word,
+      meaning,
+      language,
+      partOfSpeech,
+      // level: "A2",
+      nativeLanguage: uiLang,
+    }),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => null);
+    throw new Error(errorData?.message || errorData?.error || "Request failed");
+  }
+
+  return res.json();
+}
+
+async function giveTip(word, meaning = "", language, partOfSpeech = "") {
+  const res = await fetch("/api/generate-tip", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      word,
+      meaning,
+      language,
+      partOfSpeech,
+      level: "A2",
+      nativeLanguage: uiLang,
+    }),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => null);
+    throw new Error(errorData?.message || errorData?.error || "Request failed");
+  }
+
+  return res.json();
+}
+
+// const data = await giveTip("old", "ישן", "שם תואר");
 
 console.log("codeEnd");

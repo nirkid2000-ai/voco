@@ -264,7 +264,7 @@ export const ANSWERS_CATEGORIES = {
     passed: true,
     label: "correct",
     score: 7,
-    overlayDuration: 1200,
+    overlayDuration: 1500,
   },
   SLOW_CORRECT: {
     passed: true,
@@ -366,6 +366,18 @@ export const FEEDBACK_MEESAGES = {
     avgTime: { he: "זמן מענה ממוצע: ", en: "Avergae answer time: " },
     units: { he: "שניות", en: " Seconds" },
     cooldownTime: { he: "זמן השהייה: ", en: "Cooldown Time:" },
+  },
+  note: {
+    noteSaved: { he: "הפתק נשמר", en: "Note Saved" },
+    sentenceSaved: { he: "המשפט נשמר", en: "Sentence Saved" },
+    tipThinking: {
+      he: "חושב בשבילך על טיפ משהו משהו.",
+      en: "Generating a nice tip for you.",
+    },
+    sentenceThinking: {
+      he: "חושב בשבילך על משפט מעניין.",
+      en: "Generating a nice sentence for you.",
+    },
   },
 };
 

@@ -10,7 +10,21 @@
     <div class="main_con">
       <div id="home-screen" class="screen">
         <div class="language_btn_con">
-          <button class="language_ui_btn">Switch Interface Language</button>
+          <ul class="native_language_selection">
+            <li>
+              <label class="language_ui_label">
+                <input type="radio" name="native_lang" value="en" />
+                <span class="english_ui_btn">I speak English</span>
+              </label>
+            </li>
+            <li>
+              <label class="language_ui_label">
+                <input type="radio" name="native_lang" value="he" />
+                <span class="hebrew_ui_btn">אני דובר עברית</span>
+              </label>
+            </li>
+          </ul>
+          <!-- <button class="language_ui_btn">Switch Interface Language</button> -->
         </div>
         <div class="home_inner">
           <!-- <h1 class="the_name">VOCRO</h1> -->
@@ -54,19 +68,25 @@
             <li>
               <label class="course_label">
                 <input type="radio" name="course" value="english" />
-                <span class="english_course">English</span>
+                <span class="english_course">אנגלית</span>
+              </label>
+            </li>
+            <li>
+              <label class="course_label">
+                <input type="radio" name="course" value="hebrew" />
+                <span class="hebrew_course">עברית</span>
               </label>
             </li>
             <li>
               <label class="course_label">
                 <input type="radio" name="course" value="spanish" />
-                <span class="spanish_course">Spanish</span>
+                <span class="spanish_course">ספרדית</span>
               </label>
             </li>
             <li>
               <label class="course_label">
                 <input type="radio" name="course" value="latvian" />
-                <span class="latvian_course">Latvian</span>
+                <span class="latvian_course">לטבית</span>
               </label>
             </li>
           </ul>
@@ -412,7 +432,6 @@
                     <div class="word_level">
                       <div class="word_status">מילה חדשה</div>
                     </div>
-                    <button class="word_remove">x</button>
                   </div>
                   <div class="q">שאלה</div>
                   <div class="q_stat">
@@ -528,6 +547,25 @@
                   </div>
                 </div>
                 <div class="wordlist_wrap">
+                  <div class="remove_screen hidden">
+                    <div class="remove_question">
+                      האם אתה בטוח שברצונך להסיר את המילה מהמאגר?
+                    </div>
+                    <div class="remove_buttons">
+                      <button class="remove_btn yes_remove">כן</button>
+                      <button class="remove_btn no_remove">לא</button>
+                    </div>
+                  </div>
+                  <div class="reset_progress_screen hidden">
+                    <div class="reset_progress_question">
+                      האם אתה בטוח שברצונך לאתחל את כל נתוני המערכת למצב
+                      ההתחלתי?
+                    </div>
+                    <div class="reset_progress_buttons">
+                      <button class="remove_btn yes_reset">כן</button>
+                      <button class="remove_btn no_reset">לא</button>
+                    </div>
+                  </div>
                   <div class="meaning_overlay">
                     <div class="pin">
                       <svg
@@ -553,18 +591,62 @@
                       </svg>
                       <!-- <p class="pin_text">Click To Pin</p> -->
                     </div>
+
                     <div class="meaning_word">Word</div>
                     <div class="meaning_text">meaning</div>
-                    <div class="meaning_example">
-                      This sentence as an example
+                    <div class="press_expand">לחץ כאן כדי להרחיב את המילה</div>
+                    <div class="word_removed_text hidden">
+                      המילה הוסרה מהמאגר
                     </div>
-                    <div class="last_answers"></div>
 
-                    <div class="card_stats">
-                      <div class="time_to_answer">This is the time</div>
-                      <div class="avg_answer">This is the avg time</div>
-                      <div class="next_cooldown">
-                        This is the next cooldowntime
+                    <!-- <div class="meaning_example">
+                      This sentence as an example
+                    </div> -->
+
+                    <div class="word_expaneded hidden">
+                      <div class="expanded_content">
+                        <button class="word_remove_btn">x הסר</button>
+
+                        <div class="sentence_text hidden">
+                          <div id="loading_dots" class="loading">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                          </div>
+                          <textarea id="sentence"> </textarea>
+                          <textarea id="translation"></textarea>
+                        </div>
+                        <textarea
+                          id="note_text"
+                          class="hidden tip_holder"
+                        ></textarea>
+                        <div class="card_stats">
+                          <div class="time_to_answer">This is the time</div>
+                          <div class="avg_answer">This is the avg time</div>
+                          <div class="next_cooldown">
+                            This is the next cooldowntime
+                          </div>
+                          <div class="five_last_label">תשובות אחרונות:</div>
+                          <div class="last_answers"></div>
+                        </div>
+                      </div>
+
+                      <div class="word_buttons">
+                        <div class="main_word_btns">
+                          <button class="add_note">הוסף פתק</button>
+                          <button class="show_sentence">תן משפט</button>
+                        </div>
+                        <div class="open_note_btns hidden">
+                          <button class="give_tip">תן טיפ</button>
+
+                          <button class="save_note">שמור</button>
+                          <button class="close_note">סגור</button>
+                        </div>
+                        <div class="open_sentence_btns hidden">
+                          <button class="give_sentence">תן משפט</button>
+                          <button class="save_sentence">שמור</button>
+                          <button class="close_sentence">סגור</button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -668,10 +750,6 @@
                 </div>
               </div>
               <div class="countdown_con">
-                <div class="countdown_bg"></div>
-                <div class="countdown"></div>
-              </div>
-              <div class="btns">
                 <div class="crow_wrap">
                   <svg
                     id="main_crow"
@@ -793,10 +871,17 @@
                     />
                   </svg>
                 </div>
+                <div class="countdown_bg"></div>
+                <div class="countdown"></div>
+              </div>
+              <div class="btns">
                 <button class="submit main_ans inactive" data-mode="main">
                   בחר תשובה
                 </button>
-                <div class="knoworguess hidden">
+                <button class="close_word hidden" data-mode="close">
+                  חזרה לתרגול
+                </button>
+                <div class="knoworguess">
                   <button class="submit know_ans first" data-mode="know">
                     אני יודע
                   </button>
@@ -811,14 +896,14 @@
               <div class="timer">
                 <div class="text_stats">
                   <div class="streak">
-                    <label
+                    <span
                       >רצף תשובות נכונות:<span class="streak_stat">0</span>
-                    </label>
+                    </span>
                   </div>
                   <div class="total_stat">
-                    <label
+                    <span
                       >תשובות נכונות:<span class="total_from">0</span>
-                    </label>
+                    </span>
                   </div>
                   <div class="score">
                     <label>ניקוד:<span class="score_stat">0</span> </label>

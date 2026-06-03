@@ -4,6 +4,7 @@
 import latvianData from "./latvianboth.js";
 import spanishData from "./spanishboth.js";
 import englishData from "./en200.js";
+import hebrewData from "./heb200.js";
 
 import { LEARNING_RULES } from "./learningRules.js";
 
@@ -26,6 +27,8 @@ export function createDefaultProgress() {
     inCycle: false,
     cooldownUntil: null,
     isRemoved: false,
+    note: null,
+    sentence: null,
   };
 }
 
@@ -34,6 +37,7 @@ function loadSelectedCourse(course) {
     return englishData;
   } else if (course === "latvian") return latvianData;
   else if (course === "spanish") return spanishData;
+  else if (course === "hebrew") return hebrewData;
   else {
     console.log("no data found");
     return englishData;
@@ -46,7 +50,7 @@ export function createInitialCards(course, userLang) {
   return data.words.map((word, i) => ({
     id: i + 1,
     question: word.q,
-    answer: course === "english" ? word.ans["he"] : word.ans[userLang],
+    answer: word.ans[userLang],
     diff: word.level,
     ...createDefaultProgress(),
   }));
